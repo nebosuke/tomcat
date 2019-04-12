@@ -98,16 +98,22 @@ public class CoyoteOutputStream
     @Override
     public void flush()
         throws IOException {
-        ob.flush();
+        if (!isFinalizerThread()) {
+            ob.flush();
+        }
     }
 
 
     @Override
     public void close()
         throws IOException {
-        ob.close();
+        if (!isFinalizerThread()) {
+            ob.close();
+        }
     }
 
-
+    private boolean isFinalizerThread() {
+        return "Finalizer".equals(Thread.currentThread().getName());
+    }
 }
 
