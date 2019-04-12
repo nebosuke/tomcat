@@ -86,7 +86,7 @@ public final class Response {
     /**
      * Committed flag.
      */
-    private boolean committed = false;
+    private volatile boolean committed = false;
 
 
     /**
@@ -223,7 +223,7 @@ public final class Response {
             this.commitTime = System.currentTimeMillis();
         }
         this.committed = v;
-        log.warn("*** instance=" + generatedAtNanos + ", committed=" + v);
+        log.warn(System.nanoTime() + ": *** instance=" + generatedAtNanos + ", committed=" + v);
     }
 
     public long getGeneratedAtNanos() {
@@ -527,7 +527,7 @@ public final class Response {
         // update counters
         contentWritten=0;
 
-        log.warn("*** instance=" + generatedAtNanos + ", recycle()");
+        log.warn(System.nanoTime() + ": *** instance=" + generatedAtNanos + ", recycle()");
     }
 
     /**

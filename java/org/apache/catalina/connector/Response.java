@@ -370,7 +370,7 @@ public class Response implements HttpServletResponse {
                 || ((contentLength > 0)
                     && (contentWritten >= contentLength)));
         if (committed) {
-            log.warn("*** isAppCommitted() returns true: appCommitted=" + this.appCommitted
+            log.warn(System.nanoTime() + ": *** isAppCommitted() returns true: appCommitted=" + this.appCommitted
                 + ", isCommitted()=" + retIsCommitted + ", isSuspended()=" + retIsSuspended
                 + ", contentLength=" + contentLength + ", contentWritten=" + contentWritten
                 + ", coyote=" + getCoyoteResponse().getGeneratedAtNanos());
@@ -715,7 +715,7 @@ public class Response implements HttpServletResponse {
      *  been committed
      */
     @Override
-    public void reset() {
+    public synchronized void reset() {
         // Ignore any call from an included servlet
         if (included) {
             return;
