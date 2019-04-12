@@ -38,6 +38,7 @@ import org.apache.tomcat.util.http.parser.MediaType;
 public final class Response {
 
     // ----------------------------------------------------- Class Variables
+    private static final Log log = LogFactory.getLog(Response.class);
 
     /**
      * Default locale as mandated by the spec.
@@ -46,6 +47,8 @@ public final class Response {
 
 
     // ----------------------------------------------------- Instance Variables
+
+    private final long generatedAtNanos = System.nanoTime();
 
     /**
      * Status code.
@@ -217,6 +220,11 @@ public final class Response {
             this.commitTime = System.currentTimeMillis();
         }
         this.committed = v;
+        log.warn("*** instance=" + generatedAtNanos + ", committed=" + v);
+    }
+
+    public long getGeneratedAtNanos() {
+        return generatedAtNanos;
     }
 
     /**
@@ -498,7 +506,7 @@ public final class Response {
 
     // --------------------
 
-    public void recycle() {
+    public synchronized void recycle() {
 
         contentType = null;
         contentLanguage = null;
@@ -515,6 +523,8 @@ public final class Response {
 
         // update counters
         contentWritten=0;
+
+        log.warn("*** instance=" + generatedAtNanos + ", recycle()");
     }
 
     /**

@@ -372,7 +372,8 @@ public class Response implements HttpServletResponse {
         if (committed) {
             log.warn("*** isAppCommitted() returns true: appCommitted=" + this.appCommitted
                 + ", isCommitted()=" + retIsCommitted + ", isSuspended()=" + retIsSuspended
-                + ", contentLength=" + contentLength + ", contentWritten=" + contentWritten);
+                + ", contentLength=" + contentLength + ", contentWritten=" + contentWritten
+                + ", coyote=" + getCoyoteResponse().getGeneratedAtNanos());
         }
         return committed;
     }
