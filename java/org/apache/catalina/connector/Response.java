@@ -373,7 +373,7 @@ public class Response implements HttpServletResponse {
             log.warn(System.nanoTime() + ": *** isAppCommitted() returns true: appCommitted=" + this.appCommitted
                 + ", isCommitted()=" + retIsCommitted + ", isSuspended()=" + retIsSuspended
                 + ", contentLength=" + contentLength + ", contentWritten=" + contentWritten
-                + ", coyote=" + getCoyoteResponse().getGeneratedAtNanos());
+                + ", coyote=" + getCoyoteResponse().getGeneratedAtNanos(), new Throwable());
         }
         return committed;
     }
