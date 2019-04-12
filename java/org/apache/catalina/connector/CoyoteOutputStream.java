@@ -20,6 +20,9 @@ import java.io.IOException;
 
 import javax.servlet.ServletOutputStream;
 
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
+
 /**
  * Coyote implementation of the servlet output stream.
  *
@@ -29,6 +32,7 @@ import javax.servlet.ServletOutputStream;
 public class CoyoteOutputStream
     extends ServletOutputStream {
 
+    private static final Log log = LogFactory.getLog(CoyoteOutputStream.class);
 
     // ----------------------------------------------------- Instance Variables
 
@@ -98,16 +102,26 @@ public class CoyoteOutputStream
     @Override
     public void flush()
         throws IOException {
-        ob.flush();
+        if (isFinalizerThread()) {
+            log.warn("called by Finalizer thread.");
+        } else {
+            ob.flush();
+        }
     }
 
 
     @Override
     public void close()
         throws IOException {
-        ob.close();
+        if (isFinalizerThread()) {
+            log.warn("called by Finalizer thread.");
+        } else {
+            ob.close();
+        }
     }
 
-
+    private boolean isFinalizerThread() {
+        return "Finalizer".equals(Thread.currentThread().getName());
+    }
 }
 
