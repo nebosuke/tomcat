@@ -80,7 +80,7 @@ public final class Response {
     /**
      * Committed flag.
      */
-    private volatile boolean committed = false;
+    private boolean committed = false;
 
 
     /**
