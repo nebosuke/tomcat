@@ -46,13 +46,13 @@ public abstract class AbstractOutputBuffer<S> implements OutputBuffer{
     /**
      * Committed flag.
      */
-    protected boolean committed;
+    private volatile boolean committed;
 
 
     /**
      * Finished flag.
      */
-    protected boolean finished;
+    private volatile boolean finished;
 
 
     /**
@@ -243,7 +243,7 @@ public abstract class AbstractOutputBuffer<S> implements OutputBuffer{
      * 
      * @throws IllegalStateException if the response has already been committed
      */
-    public void reset() {
+    public synchronized void reset() {
 
         if (committed)
             throw new IllegalStateException(/*FIXME:Put an error message*/);
@@ -269,7 +269,7 @@ public abstract class AbstractOutputBuffer<S> implements OutputBuffer{
      * consumed. This method only resets all the pointers so that we are ready
      * to parse the next HTTP request.
      */
-    public void nextRequest() {
+    public synchronized void nextRequest() {
         // Recycle filters
         for (int i = 0; i <= lastActiveFilter; i++) {
             activeFilters[i].recycle();
