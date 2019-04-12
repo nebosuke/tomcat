@@ -366,7 +366,7 @@ public class Response implements HttpServletResponse {
         boolean retIsCommitted = isCommitted();
         boolean retIsSuspended = isSuspended();
         int contentLength = getContentLength();
-        int contentWritten = getContentWritten();
+        long contentWritten = getContentWritten();
         boolean committed =  (this.appCommitted || retIsCommitted || retIsSuspended
                 || ((contentLength > 0)
                     && (contentWritten >= contentLength)));
