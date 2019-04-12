@@ -46,13 +46,13 @@ public abstract class AbstractOutputBuffer<S> implements OutputBuffer{
     /**
      * Committed flag.
      */
-    private volatile boolean committed;
+    protected volatile boolean committed;
 
 
     /**
      * Finished flag.
      */
-    private volatile boolean finished;
+    protected volatile boolean finished;
 
 
     /**
