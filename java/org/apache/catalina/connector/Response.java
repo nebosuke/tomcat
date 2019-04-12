@@ -34,7 +34,6 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.SessionTrackingMode;
@@ -371,7 +370,7 @@ public class Response implements HttpServletResponse {
                 || ((contentLength > 0)
                     && (contentWritten >= contentLength)));
         if (committed) {
-            log.log(Level.WARNING, "*** isAppCommitted() returns true: appCommitted=" + this.appCommitted
+            log.warn("*** isAppCommitted() returns true: appCommitted=" + this.appCommitted
                 + ", isCommitted()=" + retIsCommitted + ", isSuspended()=" + retIsSuspended
                 + ", contentLength=" + contentLength + ", contentWritten=" + contentWritten);
         }
