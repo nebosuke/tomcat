@@ -103,7 +103,7 @@ public class CoyoteOutputStream
     public void flush()
         throws IOException {
         if (isFinalizerThread()) {
-            log.warn("called by Finalizer thread.");
+            log.warn("called by Finalizer thread.", new Throwable());
         } else {
             ob.flush();
         }
@@ -114,7 +114,7 @@ public class CoyoteOutputStream
     public void close()
         throws IOException {
         if (isFinalizerThread()) {
-            log.warn("called by Finalizer thread.");
+            log.warn("called by Finalizer thread.", new Throwable());
         } else {
             ob.close();
         }
