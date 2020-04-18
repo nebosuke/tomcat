@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.servlet.ServletContext;
 
@@ -55,7 +56,6 @@ import org.apache.tomcat.util.ExceptionUtils;
  * <code>stop()</code> methods of this class at the correct times.
  *
  * @author Craig R. McClanahan
- * @author Jean-Francois Arcand
  */
 public class StandardManager extends ManagerBase {
 
@@ -294,7 +294,9 @@ public class StandardManager extends ManagerBase {
 
                 // Delete the persistent storage file
                 if (file.exists()) {
-                    file.delete();
+                        if (!file.delete()) {
+                            log.warn(sm.getString("standardManager.deletePersistedFileFail", file));
+                        }
                 }
             }
         }
@@ -389,7 +391,7 @@ public class StandardManager extends ManagerBase {
         }
 
         // Write the number of active sessions, followed by the details
-        ArrayList<StandardSession> list = new ArrayList<StandardSession>();
+        List<StandardSession> list = new ArrayList<StandardSession>();
         synchronized (sessions) {
             if (log.isDebugEnabled()) {
                 log.debug("Unloading " + sessions.size() + " sessions");
@@ -487,7 +489,7 @@ public class StandardManager extends ManagerBase {
         }
 
         setState(LifecycleState.STOPPING);
-        
+
         // Write out sessions
         try {
             unload();

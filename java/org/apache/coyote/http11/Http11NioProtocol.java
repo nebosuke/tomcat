@@ -264,7 +264,7 @@ public class Http11NioProtocol extends AbstractHttp11JsseProtocol<NioChannel> {
         @Override
         public Http11NioProcessor createProcessor() {
             Http11NioProcessor processor = new Http11NioProcessor(
-                    proto.getMaxHttpHeaderSize(), proto.getRejectIllegalHeaderName(),
+                    proto.getMaxHttpHeaderSize(), proto.getRejectIllegalHeader(),
                     (NioEndpoint)proto.endpoint, proto.getMaxTrailerSize(),
                     proto.getAllowedTrailerHeadersAsSet(), proto.getMaxExtensionSize(),
                     proto.getMaxSwallowSize(), proto.getRelaxedPathChars(),
@@ -272,10 +272,10 @@ public class Http11NioProtocol extends AbstractHttp11JsseProtocol<NioChannel> {
             processor.setAdapter(proto.adapter);
             processor.setMaxKeepAliveRequests(proto.getMaxKeepAliveRequests());
             processor.setKeepAliveTimeout(proto.getKeepAliveTimeout());
-            processor.setConnectionUploadTimeout(
-                    proto.getConnectionUploadTimeout());
+            processor.setConnectionUploadTimeout(proto.getConnectionUploadTimeout());
             processor.setDisableUploadTimeout(proto.getDisableUploadTimeout());
             processor.setCompressionMinSize(proto.getCompressionMinSize());
+            processor.setNoCompressionStrongETag(proto.getNoCompressionStrongETag());
             processor.setCompression(proto.getCompression());
             processor.setNoCompressionUserAgents(proto.getNoCompressionUserAgents());
             processor.setCompressableMimeTypes(proto.getCompressableMimeTypes());
@@ -301,7 +301,7 @@ public class Http11NioProtocol extends AbstractHttp11JsseProtocol<NioChannel> {
                     socket, inbound,
                     ((Http11NioProtocol) getProtocol()).getEndpoint().getSelectorPool());
         }
-        
+
         @Override
         protected Processor<NioChannel> createUpgradeProcessor(
                 SocketWrapper<NioChannel> socket,

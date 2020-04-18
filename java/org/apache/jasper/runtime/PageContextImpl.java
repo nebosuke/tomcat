@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,7 +60,7 @@ import org.apache.jasper.security.SecurityUtil;
 /**
  * Implementation of the PageContext class from the JSP spec. Also doubles as a
  * VariableResolver for the EL.
- * 
+ *
  * @author Anil K. Vijendran
  * @author Larry Cable
  * @author Hans Bergsten
@@ -71,7 +71,7 @@ import org.apache.jasper.security.SecurityUtil;
  */
 public class PageContextImpl extends PageContext {
 
-    private static final JspFactory jspf = JspFactory.getDefaultFactory(); 
+    private static final JspFactory jspf = JspFactory.getDefaultFactory();
 
     private BodyContentImpl[] outs;
 
@@ -97,12 +97,12 @@ public class PageContextImpl extends PageContext {
     private transient ServletResponse response;
 
     private transient HttpSession session;
-    
+
     private transient ELContextImpl elContext;
 
     private boolean isIncluded;
-    
-    
+
+
     // initial output stream
     private transient JspWriter out;
 
@@ -138,7 +138,7 @@ public class PageContextImpl extends PageContext {
         this.errorPageURL = errorPageURL;
         this.request = request;
         this.response = response;
-        
+
         // initialize application context
         this.applicationContext = JspApplicationContextImpl.getInstance(context);
 
@@ -612,10 +612,11 @@ public class PageContextImpl extends PageContext {
     }
 
     /**
-     * Returns the exception associated with this page context, if any. <p/>
+     * Returns the exception associated with this page context, if any.
+     * <p>
      * Added wrapping for Throwables to avoid ClassCastException: see Bugzilla
      * 31171 for details.
-     * 
+     *
      * @return The Exception associated with this page context, if any.
      */
     @Override
@@ -922,7 +923,7 @@ public class PageContextImpl extends PageContext {
      * go away once the EL interpreter moves out of JSTL and into its own
      * project. For now, this is necessary because the standard machinery is too
      * slow.
-     * 
+     *
      * @param expression
      *            The expression to be evaluated
      * @param expectedType
@@ -931,7 +932,10 @@ public class PageContextImpl extends PageContext {
      *            The page context
      * @param functionMap
      *            Maps prefix and name to Method
+     * @param escape
+     *            Unused
      * @return The result of the evaluation
+     * @throws ELException If an error occurs during the evaluation
      */
     public static Object proprietaryEvaluate(final String expression,
             final Class<?> expectedType, final PageContext pageContext,
@@ -957,5 +961,4 @@ public class PageContextImpl extends PageContext {
         }
         return this.elContext;
     }
-
 }

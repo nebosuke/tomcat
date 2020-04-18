@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,20 +46,19 @@ import org.apache.catalina.tribes.util.ExecutorFactory;
  * This is the low level implementation that handles the multicasting sockets.
  * Need to fix this, could use java.nio and only need one thread to send and receive, or
  * just use a timeout on the receive
- * @author Filip Hanik
  */
 public class McastServiceImpl
 {
     private static final org.apache.juli.logging.Log log =
         org.apache.juli.logging.LogFactory.getLog( McastService.class );
-    
+
     protected static int MAX_PACKET_SIZE = 65535;
     /**
      * Internal flag used for the listen thread that listens to the multicasting socket.
      */
     protected volatile boolean doRunSender = false;
     protected volatile boolean doRunReceiver = false;
-    protected int startLevel = 0;
+    protected volatile int startLevel = 0;
     /**
      * Socket that we intend to listen to
      */
@@ -125,34 +124,34 @@ public class McastServiceImpl
      * bind address
      */
     protected InetAddress mcastBindAddress = null;
-    
+
     /**
      * nr of times the system has to fail before a recovery is initiated
      */
     protected int recoveryCounter = 10;
-    
+
     /**
      * The time the recovery thread sleeps between recovery attempts
      */
     protected long recoverySleepTime = 5000;
-    
+
     /**
      * Add the ability to turn on/off recovery
      */
     protected boolean recoveryEnabled = true;
-    
+
     /**
      * Dont interrupt the sender/receiver thread, but pass off to an executor
      */
     protected ExecutorService executor = ExecutorFactory.newThreadPool(0, 2, 2, TimeUnit.SECONDS);
-    
+
     /**
      * disable/enable local loopback message
      */
     protected boolean localLoopbackDisabled = false;
 
     private Channel channel;
-    
+
     /**
      * Create a new mcast service impl
      * @param member - the local member
@@ -204,7 +203,7 @@ public class McastServiceImpl
         member.getData(true, true);
         if ( membership == null ) membership = new Membership(member);
     }
-    
+
     protected void setupSocket() throws IOException {
         if (mcastBindAddress != null) {
             try {
@@ -263,7 +262,7 @@ public class McastServiceImpl
             receiver.setDaemon(true);
             receiver.start();
             valid = true;
-        } 
+        }
         if ( (level & Channel.MBR_TX_SEQ)==Channel.MBR_TX_SEQ ) {
             if ( sender != null ) throw new IllegalStateException("McastService.send already running.");
             if ( receiver == null ) socket.joinGroup(address);
@@ -275,7 +274,7 @@ public class McastServiceImpl
             sender.start();
             //we have started the receiver, but not yet waited for membership to establish
             valid = true;
-        } 
+        }
         if (!valid) {
             throw new IllegalArgumentException("Invalid start level. Only acceptable levels are Channel.MBR_RX_SEQ and Channel.MBR_TX_SEQ");
         }
@@ -299,20 +298,20 @@ public class McastServiceImpl
      */
     public synchronized boolean stop(int level) throws IOException {
         boolean valid = false;
-        
+
         if ( (level & Channel.MBR_RX_SEQ)==Channel.MBR_RX_SEQ ) {
             valid = true;
             doRunReceiver = false;
             if ( receiver !=null ) receiver.interrupt();
             receiver = null;
-        } 
+        }
         if ( (level & Channel.MBR_TX_SEQ)==Channel.MBR_TX_SEQ ) {
             valid = true;
             doRunSender = false;
             if ( sender != null )sender.interrupt();
             sender = null;
-        } 
-        
+        }
+
         if (!valid) {
             throw new IllegalArgumentException("Invalid stop level. Only acceptable levels are Channel.MBR_RX_SEQ and Channel.MBR_TX_SEQ");
         }
@@ -338,7 +337,7 @@ public class McastServiceImpl
     public void receive() throws IOException {
         boolean checkexpired = true;
         try {
-            
+
             socket.receive(receivePacket);
             if(receivePacket.getLength() > MAX_PACKET_SIZE) {
                 log.error("Multicast packet received was too long, dropping package:"+receivePacket.getLength());
@@ -350,9 +349,9 @@ public class McastServiceImpl
                 } else {
                     memberBroadcastsReceived(data);
                 }
-                
+
             }
-        } catch (SocketTimeoutException x ) { 
+        } catch (SocketTimeoutException x ) {
             //do nothing, this is normal, we don't want to block forever
             //since the receive thread is the same thread
             //that does membership expiration
@@ -398,7 +397,7 @@ public class McastServiceImpl
             executor.execute(t);
         }
     }
-    
+
     private void memberBroadcastsReceived(final byte[] b) {
         if (log.isTraceEnabled()) log.trace("Mcast received broadcasts.");
         XByteBuffer buffer = new XByteBuffer(b,true);
@@ -463,7 +462,7 @@ public class McastServiceImpl
                             }finally {
                                 Thread.currentThread().setName(name);
                             }
-                            
+
                         }
                     };
                     executor.execute(t);
@@ -477,11 +476,11 @@ public class McastServiceImpl
     /**
      * Send a ping
      * @throws IOException
-     */ 
+     */
     public void send(boolean checkexpired) throws IOException{
         send(checkexpired,null);
     }
-    
+
     private final Object sendLock = new Object();
 
     public void send(boolean checkexpired, DatagramPacket packet) throws IOException{
@@ -608,9 +607,9 @@ public class McastServiceImpl
             if (running) return;
             if (!parent.isRecoveryEnabled())
                 return;
-            
+
             running = true;
-            
+
             Thread t = new RecoveryThread(parent);
             String channelName = "";
             if (parent.channel instanceof GroupChannel
@@ -627,7 +626,7 @@ public class McastServiceImpl
         public RecoveryThread(McastServiceImpl parent) {
             this.parent = parent;
         }
-        
+
         public boolean stopService() {
             try {
                 parent.stop(Channel.MBR_RX_SEQ | Channel.MBR_TX_SEQ);

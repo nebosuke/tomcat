@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,7 +40,7 @@ import org.apache.juli.logging.LogFactory;
 
 /**
  * Main JSP compiler class. This class uses Ant for compiling.
- * 
+ *
  * @author Anil K. Vijendran
  * @author Mandar Raje
  * @author Pierre Delisle
@@ -49,7 +49,7 @@ import org.apache.juli.logging.LogFactory;
  * @author Mark Roth
  */
 public abstract class Compiler {
-    
+
     private final Log log = LogFactory.getLog(Compiler.class); // must not be static
 
     // ----------------------------------------------------- Instance Variables
@@ -68,6 +68,7 @@ public abstract class Compiler {
 
     protected Node.Nodes pageNodes;
 
+
     // ------------------------------------------------------------ Constructor
 
     public void init(JspCompilationContext ctxt, JspServletWrapper jsw) {
@@ -75,6 +76,7 @@ public abstract class Compiler {
         this.ctxt = ctxt;
         this.options = ctxt.getOptions();
     }
+
 
     // --------------------------------------------------------- Public Methods
 
@@ -84,16 +86,19 @@ public abstract class Compiler {
      * return null. Used in development mode for generating detailed error
      * messages. http://bz.apache.org/bugzilla/show_bug.cgi?id=37062.
      * </p>
+     * @return the page nodes
      */
     public Node.Nodes getPageNodes() {
         return this.pageNodes;
     }
 
+
     /**
      * Compile the jsp file into equivalent servlet in .java file
-     * 
+     *
      * @return a smap for the current JSP page, if one is generated, null
      *         otherwise
+     * @throws Exception Error generating Java source
      */
     protected String[] generateJava() throws Exception {
 
@@ -185,16 +190,16 @@ public abstract class Compiler {
              * solutions. We now use two passes to parse the translation unit.
              * The first just parses the directives and the second parses the
              * whole translation unit once we know how isELIgnored has been set.
-             * TODO There are some possible optimisations of this process.  
-             */ 
+             * TODO There are some possible optimisations of this process.
+             */
             // Parse the file
             ParserController parserCtl = new ParserController(ctxt, this);
-            
+
             // Pass 1 - the directives
             Node.Nodes directives =
                 parserCtl.parseDirectives(ctxt.getJspFile());
             Validator.validateDirectives(this, directives);
-            
+
             // Pass 2 - the whole translation unit
             pageNodes = parserCtl.parse(ctxt.getJspFile());
 
@@ -263,7 +268,7 @@ public abstract class Compiler {
                         + " generate=" + (t4 - t3) + " validate=" + (t2 - t1));
             }
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             if (writer != null) {
                 try {
                     writer.close();
@@ -328,13 +333,21 @@ public abstract class Compiler {
     }
 
     /**
-     * Compile the servlet from .java file to .class file
+     * Servlet compilation. This compiles the generated sources into
+     * Servlets.
+     * @param smap The SMAP files for source debugging
+     * @throws FileNotFoundException Source files not found
+     * @throws JasperException Compilation error
+     * @throws Exception Some other error
      */
     protected abstract void generateClass(String[] smap)
             throws FileNotFoundException, JasperException, Exception;
 
     /**
-     * Compile the jsp file from the current engine context
+     * Compile the jsp file from the current engine context.
+     * @throws FileNotFoundException Source files not found
+     * @throws JasperException Compilation error
+     * @throws Exception Some other error
      */
     public void compile() throws FileNotFoundException, JasperException,
             Exception {
@@ -344,10 +357,13 @@ public abstract class Compiler {
     /**
      * Compile the jsp file from the current engine context. As an side- effect,
      * tag files that are referenced by this page are also compiled.
-     * 
+     *
      * @param compileClass
      *            If true, generate both .java and .class file If false,
      *            generate only .java file
+     * @throws FileNotFoundException Source files not found
+     * @throws JasperException Compilation error
+     * @throws Exception Some other error
      */
     public void compile(boolean compileClass) throws FileNotFoundException,
             JasperException, Exception {
@@ -357,12 +373,15 @@ public abstract class Compiler {
     /**
      * Compile the jsp file from the current engine context. As an side- effect,
      * tag files that are referenced by this page are also compiled.
-     * 
+     *
      * @param compileClass
      *            If true, generate both .java and .class file If false,
      *            generate only .java file
      * @param jspcMode
      *            true if invoked from JspC, false otherwise
+     * @throws FileNotFoundException Source files not found
+     * @throws JasperException Compilation error
+     * @throws Exception Some other error
      */
     public void compile(boolean compileClass, boolean jspcMode)
             throws FileNotFoundException, JasperException, Exception {
@@ -371,17 +390,22 @@ public abstract class Compiler {
         }
 
         try {
+            final Long jspLastModified = ctxt.getLastModified(ctxt.getJspFile());
             String[] smap = generateJava();
             File javaFile = new File(ctxt.getServletJavaFileName());
-            Long jspLastModified = ctxt.getLastModified(ctxt.getJspFile());
-            javaFile.setLastModified(jspLastModified.longValue());
+            if (!javaFile.setLastModified(jspLastModified.longValue())) {
+                throw new JasperException(Localizer.getMessage("jsp.error.setLastModified", javaFile));
+            }
             if (compileClass) {
                 generateClass(smap);
                 // Fix for bugzilla 41606
                 // Set JspServletWrapper.servletClassLastModifiedTime after successful compile
                 File targetFile = new File(ctxt.getClassFileName());
                 if (targetFile.exists()) {
-                    targetFile.setLastModified(jspLastModified.longValue());
+                    if (!targetFile.setLastModified(jspLastModified.longValue())) {
+                        throw new JasperException(
+                                Localizer.getMessage("jsp.error.setLastModified", targetFile));
+                    }
                     if (jsw != null) {
                         jsw.setServletClassLastModifiedTime(
                                 jspLastModified.longValue());
@@ -418,6 +442,8 @@ public abstract class Compiler {
     /**
      * This is a protected method intended to be overridden by subclasses of
      * Compiler. This is used by the compile method to do all the compilation.
+     * @return <code>true</code> if the source generation and compilation
+     *  should occur
      */
     public boolean isOutDated() {
         return isOutDated(true);
@@ -428,10 +454,12 @@ public abstract class Compiler {
      * JSP page with that of the corresponding .class or .java file. If the page
      * has dependencies, the check is also extended to its dependents, and so
      * on. This method can by overridden by a subclasses of Compiler.
-     * 
+     *
      * @param checkClass
      *            If true, check against .class file, if false, check against
      *            .java file.
+     * @return <code>true</code> if the source generation and compilation
+     *  should occur
      */
     public boolean isOutDated(boolean checkClass) {
 
@@ -536,14 +564,14 @@ public abstract class Compiler {
     }
 
     /**
-     * Gets the error dispatcher.
+     * @return the error dispatcher.
      */
     public ErrorDispatcher getErrorDispatcher() {
         return errDispatcher;
     }
 
     /**
-     * Gets the info about the page under compilation
+     * @return the info about the page under compilation
      */
     public PageInfo getPageInfo() {
         return pageInfo;

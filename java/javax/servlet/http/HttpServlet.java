@@ -70,8 +70,6 @@ import javax.servlet.ServletResponse;
  * <a href="http://java.sun.com/Series/Tutorial/java/threads/multithreaded.html">
  * Java Tutorial on Multithreaded Programming</a> for more
  * information on handling multiple threads in a Java program.
- *
- * @author  Various
  */
 public abstract class HttpServlet extends GenericServlet {
 
@@ -90,7 +88,7 @@ public abstract class HttpServlet extends GenericServlet {
 
     private static final String LSTRING_FILE =
         "javax.servlet.http.LocalStrings";
-    private static ResourceBundle lStrings =
+    private static final ResourceBundle lStrings =
         ResourceBundle.getBundle(LSTRING_FILE);
 
 
@@ -448,7 +446,7 @@ public abstract class HttpServlet extends GenericServlet {
 
     /**
      * Called by the server (via the <code>service</code> method)
-     * to allow a servlet to handle a OPTIONS request.
+     * to allow a servlet to handle an OPTIONS request.
      *
      * The OPTIONS request determines which HTTP methods
      * the server supports and
@@ -582,7 +580,6 @@ public abstract class HttpServlet extends GenericServlet {
         ServletOutputStream out = resp.getOutputStream();
         out.print(buffer.toString());
         out.close();
-        return;
     }
 
 
@@ -741,14 +738,14 @@ public abstract class HttpServlet extends GenericServlet {
  */
 // file private
 class NoBodyResponse extends HttpServletResponseWrapper {
-    private NoBodyOutputStream                noBody;
-    private PrintWriter                        writer;
-    private boolean                        didSetContentLength;
+    private final NoBodyOutputStream noBody;
+    private PrintWriter writer;
+    private boolean didSetContentLength;
 
     // file private
     NoBodyResponse(HttpServletResponse r) {
         super(r);
-        noBody = new NoBodyOutputStream();
+        noBody = new NoBodyOutputStream(this);
     }
 
     // file private
@@ -828,14 +825,16 @@ class NoBodyOutputStream extends ServletOutputStream {
 
     private static final String LSTRING_FILE =
         "javax.servlet.http.LocalStrings";
-    private static ResourceBundle lStrings =
+    private static final ResourceBundle lStrings =
         ResourceBundle.getBundle(LSTRING_FILE);
 
-    private int                contentLength = 0;
+    private final HttpServletResponse response;
+    private boolean flushed = false;
+    private int contentLength = 0;
 
     // file private
-    NoBodyOutputStream() {
-        // NOOP
+    NoBodyOutputStream(HttpServletResponse response) {
+        this.response = response;
     }
 
     // file private
@@ -844,8 +843,9 @@ class NoBodyOutputStream extends ServletOutputStream {
     }
 
     @Override
-    public void write(int b) {
+    public void write(int b) throws IOException {
         contentLength++;
+        checkCommit();
     }
 
     @Override
@@ -866,5 +866,13 @@ class NoBodyOutputStream extends ServletOutputStream {
         }
 
         contentLength += len;
+        checkCommit();
+    }
+
+    private void checkCommit() throws IOException {
+        if (!flushed && contentLength > response.getBufferSize()) {
+            response.flushBuffer();
+            flushed = true;
+        }
     }
 }

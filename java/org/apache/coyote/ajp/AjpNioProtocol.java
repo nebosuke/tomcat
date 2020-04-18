@@ -23,6 +23,7 @@ import org.apache.coyote.AbstractProtocol;
 import org.apache.coyote.Processor;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.compat.JreCompat;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.NioChannel;
 import org.apache.tomcat.util.net.NioEndpoint;
@@ -37,8 +38,8 @@ import org.apache.tomcat.util.net.SocketWrapper;
  * will not fit Jk protocols like JNI.
  */
 public class AjpNioProtocol extends AbstractAjpProtocol<NioChannel> {
-    
-    
+
+
     private static final Log log = LogFactory.getLog(AjpNioProtocol.class);
 
     @Override
@@ -56,6 +57,7 @@ public class AjpNioProtocol extends AbstractAjpProtocol<NioChannel> {
 
     public AjpNioProtocol() {
         endpoint = new NioEndpoint();
+        endpoint.setAddress(JreCompat.getInstance().getLoopbackAddress());
         cHandler = new AjpConnectionHandler(this);
         ((NioEndpoint) endpoint).setHandler(cHandler);
         setSoLinger(Constants.DEFAULT_CONNECTION_LINGER);
@@ -65,7 +67,7 @@ public class AjpNioProtocol extends AbstractAjpProtocol<NioChannel> {
         ((NioEndpoint) endpoint).setUseSendfile(false);
     }
 
-    
+
     // ----------------------------------------------------- Instance Variables
 
 
@@ -118,7 +120,7 @@ public class AjpNioProtocol extends AbstractAjpProtocol<NioChannel> {
          */
         @Override
         public void release(SocketChannel socket) {
-            if (log.isDebugEnabled()) 
+            if (log.isDebugEnabled())
                 log.debug("Iterating through our connections to release a socket channel:"+socket);
             boolean released = false;
             Iterator<java.util.Map.Entry<NioChannel, Processor<NioChannel>>> it = connections.entrySet().iterator();
@@ -133,10 +135,10 @@ public class AjpNioProtocol extends AbstractAjpProtocol<NioChannel> {
                     break;
                 }
             }
-            if (log.isDebugEnabled()) 
+            if (log.isDebugEnabled())
                 log.debug("Done iterating through our connections to release a socket channel:"+socket +" released:"+released);
         }
-        
+
         /**
          * Expected to be used by the Poller to release resources on socket
          * close, errors etc.
@@ -178,10 +180,11 @@ public class AjpNioProtocol extends AbstractAjpProtocol<NioChannel> {
             processor.setAjpFlush(proto.getAjpFlush());
             processor.setTomcatAuthentication(proto.tomcatAuthentication);
             processor.setTomcatAuthorization(proto.getTomcatAuthorization());
-            processor.setRequiredSecret(proto.requiredSecret);
+            processor.setSecret(proto.getSecret());
             processor.setKeepAliveTimeout(proto.getKeepAliveTimeout());
             processor.setClientCertProvider(proto.getClientCertProvider());
             processor.setMaxCookieCount(proto.getMaxCookieCount());
+            processor.setAllowedRequestAttributesPatternPattern(proto.getAllowedRequestAttributesPatternPattern());
             register(processor);
             return processor;
         }

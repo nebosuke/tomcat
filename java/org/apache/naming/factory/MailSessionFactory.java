@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,7 +44,7 @@ import javax.naming.spi.ObjectFactory;
  *     connections.  Defaults to <code>localhost</code> if not specified.</li>
  * </ul>
  *
- * <p>This factory can be configured in a 
+ * <p>This factory can be configured in a
  * <code>&lt;Context&gt;</code> element in your <code>conf/server.xml</code>
  * configuration file.  An example of factory configuration is:</p>
  * <pre>
@@ -94,7 +94,7 @@ public class MailSessionFactory implements ObjectFactory {
         // Return null if we cannot create an object of the requested type
         final Reference ref = (Reference) refObj;
         if (!ref.getClassName().equals(factoryType))
-            return (null);
+            return null;
 
         // Create a new Session inside a doPrivileged block, so that JavaMail
         // can read its default properties without throwing Security
@@ -133,7 +133,7 @@ public class MailSessionFactory implements ObjectFactory {
                         if(user == null) {
                             user = props.getProperty("mail.user");
                         }
-                        
+
                         if(user != null) {
                             final PasswordAuthentication pa = new PasswordAuthentication(user, password);
                             auth = new Authenticator() {
@@ -147,7 +147,7 @@ public class MailSessionFactory implements ObjectFactory {
 
                     // Create and return the new Session object
                     Session session = Session.getInstance(props, auth);
-                    return (session);
+                    return session;
 
                 }
         } );

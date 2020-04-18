@@ -25,7 +25,8 @@ public final class SSLContext {
 
 
     /**
-     * Initialize new SSL context
+     * Create a new SSL context.
+     *
      * @param pool The pool to use.
      * @param protocol The SSL protocol to use. It can be any combination of
      * the following:
@@ -44,9 +45,13 @@ public final class SSLContext {
      * SSL_MODE_SERVER
      * SSL_MODE_COMBINED
      * </PRE>
+     *
+     * @return The Java representation of a pointer to the newly created SSL
+     *         Context
+     *
+     * @throws Exception If the SSL Context could not be created
      */
-    public static native long make(long pool, int protocol, int mode)
-        throws Exception;
+    public static native long make(long pool, int protocol, int mode) throws Exception;
 
     /**
      * Free the resources used by the Context
@@ -102,7 +107,7 @@ public final class SSLContext {
      * <b>mode</b>. SSL objects created from <b>ctx</b> inherit the
      * <b>mode</b> valid at the time and may be 0 or 1.
      * <br>
-     * Normally when a SSL connection is finished, the parties must send out
+     * Normally when an SSL connection is finished, the parties must send out
      * "close notify" alert messages using L&lt;SSL_shutdown(3)|SSL_shutdown(3)&gt;
      * for a clean shutdown.
      * <br>
@@ -126,11 +131,13 @@ public final class SSLContext {
      * is permitted to negotiate in the SSL handshake phase. Notice that this
      * directive can be used both in per-server and per-directory context.
      * In per-server context it applies to the standard SSL handshake when a
-     * connection is established. In per-directory context it forces a SSL
+     * connection is established. In per-directory context it forces an SSL
      * renegotiation with the reconfigured Cipher Suite after the HTTP request
      * was read but before the HTTP response is sent.
      * @param ctx Server or Client context to use.
-     * @param ciphers An SSL cipher specification.
+     * @param ciphers An OpenSSL cipher specification.
+     * @return <code>true</code> if the operation was successful
+     * @throws Exception An error occurred
      */
     public static native boolean setCipherSuite(long ctx, String ciphers)
         throws Exception;
@@ -153,6 +160,8 @@ public final class SSLContext {
      * @param ctx Server or Client context to use.
      * @param file File of concatenated PEM-encoded CA CRLs for Client Auth.
      * @param path Directory of PEM-encoded CA Certificates for Client Auth.
+     * @return <code>true</code> if the operation was successful
+     * @throws Exception An error occurred
      */
     public static native boolean setCARevocation(long ctx, String file,
                                                  String path)
@@ -177,6 +186,7 @@ public final class SSLContext {
      * @param file File of PEM-encoded Server CA Certificates.
      * @param skipfirst Skip first certificate if chain file is inside
      *                  certificate file.
+     * @return <code>true</code> if the operation was successful
      */
     public static native boolean setCertificateChainFile(long ctx, String file,
                                                          boolean skipfirst);
@@ -202,6 +212,8 @@ public final class SSLContext {
      * @param password Certificate password. If null and certificate
      *                 is encrypted, password prompt will be displayed.
      * @param idx Certificate index SSL_AIDX_RSA or SSL_AIDX_DSA.
+     * @return <code>true</code> if the operation was successful
+     * @throws Exception An error occurred
      */
     public static native boolean setCertificate(long ctx, String cert,
                                                 String key, String password,
@@ -228,6 +240,8 @@ public final class SSLContext {
      * @param file File of concatenated PEM-encoded CA Certificates for
      *             Client Auth.
      * @param path Directory of PEM-encoded CA Certificates for Client Auth.
+     * @return <code>true</code> if the operation was successful
+     * @throws Exception An error occurred
      */
     public static native boolean setCACertificate(long ctx, String file,
                                                   String path)
@@ -262,7 +276,7 @@ public final class SSLContext {
      * Authentication. Notice that this directive can be used both in per-server
      * and per-directory context. In per-server context it applies to the client
      * authentication process used in the standard SSL handshake when a connection
-     * is established. In per-directory context it forces a SSL renegotiation with
+     * is established. In per-directory context it forces an SSL renegotiation with
      * the reconfigured client verification level after the HTTP request was read
      * but before the HTTP response is sent.
      * <br>

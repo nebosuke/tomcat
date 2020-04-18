@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.ServletContext;
 
@@ -76,6 +77,7 @@ public final class FileStore extends StoreBase {
      */
     private static final String storeName = "fileStore";
 
+
     /**
      * Name to register for the background thread.
      */
@@ -110,13 +112,14 @@ public final class FileStore extends StoreBase {
         return info;
     }
 
-    
+
     /**
      * @return The thread name for this Store.
      */
     public String getThreadName() {
         return threadName;
     }
+
 
     /**
      * Return the name for this Store, used for logging.
@@ -135,17 +138,17 @@ public final class FileStore extends StoreBase {
     @Override
     public int getSize() throws IOException {
         // Acquire the list of files in our storage directory
-        File file = directory();
-        if (file == null) {
-            return (0);
+        File dir = directory();
+        if (dir == null) {
+            return 0;
         }
-        String files[] = file.list();
+        String files[] = dir.list();
 
         // Figure out which files are sessions
         int keycount = 0;
         if (files != null) {
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].endsWith(FILE_EXT)) {
+            for (String file : files) {
+                if (file.endsWith(FILE_EXT)) {
                     keycount++;
                 }
             }
@@ -180,24 +183,23 @@ public final class FileStore extends StoreBase {
     @Override
     public String[] keys() throws IOException {
         // Acquire the list of files in our storage directory
-        File file = directory();
-        if (file == null) {
-            return (new String[0]);
+        File dir = directory();
+        if (dir == null) {
+            return new String[0];
         }
+        String files[] = dir.list();
 
-        String files[] = file.list();
-        
         // Bugzilla 32130
-        if((files == null) || (files.length < 1)) {
-            return (new String[0]);
+        if (files == null || files.length < 1) {
+            return new String[0];
         }
 
         // Build and return the list of session identifiers
-        ArrayList<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<String>();
         int n = FILE_EXT.length();
-        for (int i = 0; i < files.length; i++) {
-            if (files[i].endsWith(FILE_EXT)) {
-                list.add(files[i].substring(0, files[i].length() - n));
+        for (String file : files) {
+            if (file.endsWith(FILE_EXT)) {
+                list.add (file.substring(0, file.length() - n));
             }
         }
         return list.toArray(new String[list.size()]);
@@ -218,11 +220,7 @@ public final class FileStore extends StoreBase {
     public Session load(String id) throws ClassNotFoundException, IOException {
         // Open an input stream to the specified pathname, if any
         File file = file(id);
-        if (file == null) {
-            return null;
-        }
-
-        if (!file.exists()) {
+        if (file == null || !file.exists()) {
             return null;
         }
 
@@ -298,7 +296,10 @@ public final class FileStore extends StoreBase {
             manager.getContainer().getLogger().debug(sm.getString(getStoreName()+".removing",
                              id, file.getAbsolutePath()));
         }
-        file.delete();
+
+        if (file.exists() && !file.delete()) {
+            throw new IOException(sm.getString("fileStore.deleteSessionFailed", file));
+        }
     }
 
 
@@ -342,7 +343,6 @@ public final class FileStore extends StoreBase {
         } finally {
             oos.close();
         }
-
     }
 
 

@@ -31,7 +31,6 @@ import org.apache.tomcat.jdbc.pool.interceptor.ConnectionState;
 /**
  * Represents a pooled connection
  * and holds a reference to the {@link java.sql.Connection} object
- * @author Filip Hanik
  * @version 1.0
  */
 public class PooledConnection {
@@ -172,9 +171,9 @@ public class PooledConnection {
                 log.debug("Unable to disconnect previous connection.", x);
             } //catch
         } //end if
-        if (poolProperties.getDataSource()==null && poolProperties.getDataSourceJNDI()!=null) {
+        //if (poolProperties.getDataSource()==null && poolProperties.getDataSourceJNDI()!=null) {
             //TODO lookup JNDI name
-        }
+        //}
 
         if (poolProperties.getDataSource()!=null) {
             connectUsingDataSource();
@@ -362,9 +361,9 @@ public class PooledConnection {
     }
 
     /**
-     * Returns true if the connection pool is configured
+     * Returns <code>true</code> if the connection pool is configured
      * to do validation for a certain action.
-     * @param action
+     * @param action The validation action
      */
     private boolean doValidate(int action) {
         if (action == PooledConnection.VALIDATE_BORROW &&
@@ -386,9 +385,12 @@ public class PooledConnection {
             return false;
     }
 
-    /**Returns true if the object is still valid. if not
+    /**
+     * Returns <code>true</code> if the object is still valid. if not
      * the pool will call the getExpiredAction() and follow up with one
      * of the four expired methods
+     * @param validateAction The value
+     * @return <code>true</code> if the connection is valid
      */
     public boolean validate(int validateAction) {
         return validate(validateAction,null);
@@ -449,11 +451,13 @@ public class PooledConnection {
         }
 
         if (query == null) {
+            boolean transactionCommitted = false;
             int validationQueryTimeout = poolProperties.getValidationQueryTimeout();
             if (validationQueryTimeout < 0) validationQueryTimeout = 0;
             try {
                 if (connection.isValid(validationQueryTimeout)) {
                     this.lastValidated = now;
+                    transactionCommitted = silentlyCommitTransactionIfNeeded();
                     return true;
                 } else {
                     if (getPoolProperties().getLogValidationErrors()) {
@@ -468,9 +472,14 @@ public class PooledConnection {
                     log.debug("isValid() failed.", e);
                 }
                 return false;
+            } finally {
+                if (!transactionCommitted) {
+                    silentlyRollbackTransactionIfNeeded();
+                }
             }
         }
 
+        boolean transactionCommitted = false;
         Statement stmt = null;
         try {
             stmt = connection.createStatement();
@@ -483,6 +492,7 @@ public class PooledConnection {
             stmt.execute(query);
             stmt.close();
             this.lastValidated = now;
+            transactionCommitted = silentlyCommitTransactionIfNeeded();
             return true;
         } catch (Exception ex) {
             if (getPoolProperties().getLogValidationErrors()) {
@@ -493,24 +503,40 @@ public class PooledConnection {
             if (stmt!=null)
                 try { stmt.close();} catch (Exception ignore2){/*NOOP*/}
 
-            try {
-                if(!connection.getAutoCommit()) {
-                    connection.rollback();
-                }
-            } catch (SQLException e) {
-                // do nothing
-            }
         } finally {
-            try {
-                if(!connection.getAutoCommit()) {
-                    connection.commit();
-                }
-            } catch (SQLException e) {
-                // do nothing
+            if (!transactionCommitted) {
+                silentlyRollbackTransactionIfNeeded();
             }
         }
         return false;
     } //validate
+
+
+    private boolean silentlyCommitTransactionIfNeeded() {
+        try {
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
+            return true;
+        } catch (SQLException e) {
+            log.debug("Failed to commit transaction", e);
+        }
+        return false;
+    }
+
+
+    private boolean silentlyRollbackTransactionIfNeeded() {
+        try {
+            if (!connection.getAutoCommit()) {
+                connection.rollback();
+            }
+            return true;
+        } catch (SQLException e) {
+            log.debug("Failed to rollback transaction", e);
+        }
+        return false;
+    }
+
 
     /**
      * The time limit for how long the object
@@ -522,7 +548,7 @@ public class PooledConnection {
     }
 
     /**
-     * This method is called if (Now - timeCheckedIn > getReleaseTime())
+     * This method is called if (Now - timeCheckedIn &gt; getReleaseTime())
      * This method disconnects the connection, logs an error in debug mode if it happens
      * then sets the {@link #released} flag to false. Any attempts to connect this cached object again
      * will fail per {@link #connect()}
@@ -600,7 +626,7 @@ public class PooledConnection {
     /**
      * Sets the pool configuration for this connection and connection pool.
      * Object is shared with the {@link ConnectionPool}
-     * @param poolProperties
+     * @param poolProperties The pool properties
      */
     public void setPoolProperties(PoolConfiguration poolProperties) {
         this.poolProperties = poolProperties;

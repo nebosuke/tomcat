@@ -392,14 +392,19 @@ public class TestChunkedInputFilter extends TomcatBaseTest {
         request += SimpleHttpClient.CRLF + chunks + "0" + SimpleHttpClient.CRLF
                 + SimpleHttpClient.CRLF;
 
-        TrailerClient client = new TrailerClient(tomcat.getConnector()
-                .getLocalPort());
+        TrailerClient client = new TrailerClient(tomcat.getConnector().getLocalPort());
+        // Need to use the content length here as variations in Connector and
+        // JVM+OS behaviour mean that in some circumstances the client may see
+        // an IOException rather than the response body when the server closes
+        // the connection.
+        client.setUseContentLength(true);
         client.setRequest(new String[] { request });
 
         Exception processException = null;
         client.connect();
         try {
             client.processRequest();
+            client.disconnect();
         } catch (Exception e) {
             // Socket was probably closed before client had a chance to read
             // response

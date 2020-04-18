@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.catalina.loader;
 
 import java.io.ByteArrayInputStream;
@@ -222,7 +220,6 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
 
     // ------------------------------------------------------- Static Variables
 
-
     /**
      * The set of trigger classes that will cause a proposed repository not
      * to be added if this class is visible to the class loader that loaded
@@ -250,8 +247,8 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
      */
     boolean antiJARLocking = false;
 
-    // ----------------------------------------------------------- Constructors
 
+    // ----------------------------------------------------------- Constructors
 
     /**
      * Construct a new ClassLoader with no defined repositories and no
@@ -319,7 +316,6 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
 
 
     // ----------------------------------------------------- Instance Variables
-
 
     /**
      * Associated directory context giving access to the resources in this
@@ -480,7 +476,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
 
     /**
      * The bootstrap class loader used to load the JavaSE classes. In some
-     * implementations this class loader is always <code>null</null> and in
+     * implementations this class loader is always <code>null</code> and in
      * those cases {@link ClassLoader#getParent()} will be called recursively on
      * the system class loader and the last non-null result used.
      */
@@ -1575,14 +1571,15 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
         }
 
         // Looking at the JAR files
+        String jarPath = (name.startsWith("/")) ? name.substring(1) : name;
         synchronized (jarFiles) {
             if (openJARs()) {
                 for (i = 0; i < jarFilesLength; i++) {
-                    JarEntry jarEntry = jarFiles[i].getJarEntry(name);
+                    JarEntry jarEntry = jarFiles[i].getJarEntry(jarPath);
                     if (jarEntry != null) {
                         try {
                             String jarFakeUrl = getURI(jarRealFiles[i]).toString();
-                            result.add(UriUtil.buildJarUrl(jarFakeUrl, name));
+                            result.add(UriUtil.buildJarUrl(jarFakeUrl, jarPath));
                         } catch (MalformedURLException e) {
                             // Ignore
                         }
@@ -2571,7 +2568,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
                                 contextName, thread.getName()));
                     }
 
-                    // Don't try an stop the threads unless explicitly
+                    // Don't try and stop the threads unless explicitly
                     // configured to do so
                     if (!clearReferencesStopThreads) {
                         continue;
@@ -2587,11 +2584,9 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
                         // "runnable" in IBM JDK
                         // "action" in Apache Harmony
                         Object target = null;
-                        for (String fieldName : new String[] { "target",
-                                "runnable", "action" }) {
+                        for (String fieldName : new String[] { "target", "runnable", "action" }) {
                             try {
-                                Field targetField = thread.getClass()
-                                        .getDeclaredField(fieldName);
+                                Field targetField = thread.getClass().getDeclaredField(fieldName);
                                 targetField.setAccessible(true);
                                 target = targetField.get(thread);
                                 break;
@@ -2602,12 +2597,10 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
 
                         // "java.util.concurrent" code is in public domain,
                         // so all implementations are similar
-                        if (target != null &&
-                                target.getClass().getCanonicalName() != null
-                                && target.getClass().getCanonicalName().equals(
-                                "java.util.concurrent.ThreadPoolExecutor.Worker")) {
-                            Field executorField =
-                                target.getClass().getDeclaredField("this$0");
+                        if (target != null && target.getClass().getCanonicalName() != null &&
+                                target.getClass().getCanonicalName().equals(
+                                        "java.util.concurrent.ThreadPoolExecutor.Worker")) {
+                            Field executorField = target.getClass().getDeclaredField("this$0");
                             executorField.setAccessible(true);
                             Object executor = executorField.get(target);
                             if (executor instanceof ThreadPoolExecutor) {
@@ -2732,7 +2725,9 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
                 synchronized(queue) {
                     newTasksMayBeScheduledField.setBoolean(thread, false);
                     clearMethod.invoke(queue);
-                    queue.notify();  // In case queue was already empty.
+                    // In case queue was already empty. Should only be one
+                    // thread waiting but use notifyAll() to be safe.
+                    queue.notifyAll();
                 }
 
             }catch (NoSuchFieldException nfe){

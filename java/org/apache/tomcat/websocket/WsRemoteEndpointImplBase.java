@@ -50,8 +50,7 @@ import org.apache.tomcat.util.res.StringManager;
 
 public abstract class WsRemoteEndpointImplBase implements RemoteEndpoint {
 
-    private static final StringManager sm =
-            StringManager.getManager(Constants.PACKAGE_NAME);
+    private static final StringManager sm = StringManager.getManager(WsRemoteEndpointImplBase.class);
 
     // Milliseconds so this is 20 seconds
     private static final long DEFAULT_BLOCKING_SEND_TIMEOUT = 20 * 1000;
@@ -300,7 +299,12 @@ public abstract class WsRemoteEndpointImplBase implements RemoteEndpoint {
                 intermediateMessageHandler,
                 new EndMessageHandler(this, handler)));
 
-        messageParts = transformation.sendMessagePart(messageParts);
+        try {
+            messageParts = transformation.sendMessagePart(messageParts);
+        } catch (IOException ioe) {
+            handler.onResult(new SendResult(ioe));
+            return;
+        }
 
         // Some extensions/transformations may buffer messages so it is possible
         // that no message parts will be returned. If this is the case the
@@ -820,7 +824,7 @@ public abstract class WsRemoteEndpointImplBase implements RemoteEndpoint {
         private final ByteBuffer outputBuffer;
         private final boolean flushRequired;
         private final WsRemoteEndpointImplBase endpoint;
-        private int maskIndex = 0;
+        private volatile int maskIndex = 0;
 
         public OutputBufferSendHandler(SendHandler completion,
                 ByteBuffer headerBuffer, ByteBuffer payload, byte[] mask,

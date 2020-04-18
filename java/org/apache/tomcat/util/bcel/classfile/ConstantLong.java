@@ -36,7 +36,7 @@ public final class ConstantLong extends Constant {
     /**
      * Initialize instance from file data.
      *
-     * @param file Input stream
+     * @param input Input stream
      * @throws IOException
      */
     ConstantLong(final DataInput input) throws IOException {
@@ -48,7 +48,7 @@ public final class ConstantLong extends Constant {
     /**
      * @return data, i.e., 8 bytes.
      */
-    public final long getBytes() {
+    public long getBytes() {
         return bytes;
     }
 }

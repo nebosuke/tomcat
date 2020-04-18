@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,8 @@ public class FindLeaksTask extends AbstractCatalinaTask {
     /**
      * Sets the statusLine parameter that controls if the response includes a
      * status line or not.
+     *
+     * @param statusLine <code>true</code> if the status line should be included
      */
     public void setStatusLine(boolean statusLine) {
         this.statusLine = statusLine;
@@ -37,10 +39,14 @@ public class FindLeaksTask extends AbstractCatalinaTask {
     /**
      * Returns the statusLine parameter that controls if the response includes a
      * status line or not.
+     *
+     * @return <code>true</code> if the status line should be included,
+     *         otherwise <code>false</code>
      */
     public boolean getStatusLine() {
         return statusLine;
     }
+
 
     /**
      * Execute the requested operation.
@@ -49,9 +55,7 @@ public class FindLeaksTask extends AbstractCatalinaTask {
      */
     @Override
     public void execute() throws BuildException {
-
         super.execute();
         execute("/findleaks?statusLine=" + Boolean.toString(statusLine));
     }
-
 }

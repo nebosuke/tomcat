@@ -81,77 +81,78 @@ package javax.servlet.jsp.tagext;
  * thus where synchronization is needed as illustrated by the table below.
  * <b>Note:</b> the synchronization of the variable(s) will occur <em>after</em>
  * the respective method has been called. <blockquote>
- * <table cellpadding="2" cellspacing="2" border="0" width="55%" style="background-color:#999999" summary="Variable Synchronization Points">
+ * <table style="background-color:#999999">
+ * <caption>Variable Synchronization Points</caption>
  * <tbody>
- * <tr align="center">
- * <td valign="top" colspan="6" style="background-color:#999999"><u><b>Variable Synchronization
- * Points</b></u><br>
+ * <tr>
+ * <td valign="top" colspan="6" style="background-color:#999999">
+ *   <u><b>Variable Synchronization Points</b></u><br>
  * </td>
  * </tr>
  * <tr>
  * <th valign="top" style="background-color:#c0c0c0">&nbsp;</th>
- * <th valign="top" style="background-color:#c0c0c0" align="center">doStartTag()</th>
- * <th valign="top" style="background-color:#c0c0c0" align="center">doInitBody()</th>
- * <th valign="top" style="background-color:#c0c0c0" align="center">doAfterBody()</th>
- * <th valign="top" style="background-color:#c0c0c0" align="center">doEndTag()</th>
- * <th valign="top" style="background-color:#c0c0c0" align="center">doTag()</th>
+ * <th valign="top" style="background-color:#c0c0c0">doStartTag()</th>
+ * <th valign="top" style="background-color:#c0c0c0">doInitBody()</th>
+ * <th valign="top" style="background-color:#c0c0c0">doAfterBody()</th>
+ * <th valign="top" style="background-color:#c0c0c0">doEndTag()</th>
+ * <th valign="top" style="background-color:#c0c0c0">doTag()</th>
  * </tr>
  * <tr>
  * <td valign="top" style="background-color:#c0c0c0"><b>Tag<br>
  * </b></td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
  * </tr>
  * <tr>
  * <td valign="top" style="background-color:#c0c0c0"><b>IterationTag<br>
  * </b></td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
  * </tr>
  * <tr>
  * <td valign="top" style="background-color:#c0c0c0"><b>BodyTag<br>
  * </b></td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN,
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN,
  * NESTED<sup>1</sup><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN,
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN,
  * NESTED<sup>1</sup><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, NESTED<br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
  * </tr>
  * <tr>
  * <td valign="top" style="background-color:#c0c0c0"><b>SimpleTag<br>
  * </b></td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff"><br>
+ * <td valign="top" style="background-color:#ffffff"><br>
  * </td>
- * <td valign="top" align="center" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
+ * <td valign="top" style="background-color:#ffffff">AT_BEGIN, AT_END<br>
  * </td>
  * </tr>
  * </tbody>
@@ -187,7 +188,7 @@ public class VariableInfo {
     /**
      * Constructor These objects can be created (at translation time) by the
      * TagExtraInfo instances.
-     * 
+     *
      * @param varName
      *            The name of the scripting variable
      * @param className
@@ -210,7 +211,7 @@ public class VariableInfo {
 
     /**
      * Returns the name of the scripting variable.
-     * 
+     *
      * @return the name of the scripting variable
      */
     public String getVarName() {
@@ -219,7 +220,7 @@ public class VariableInfo {
 
     /**
      * Returns the type of this variable.
-     * 
+     *
      * @return the type of this variable
      */
     public String getClassName() {
@@ -229,7 +230,7 @@ public class VariableInfo {
     /**
      * Returns whether this is a new variable. If so, in some languages this
      * will require a declaration.
-     * 
+     *
      * @return whether this is a new variable.
      */
     public boolean getDeclare() {
@@ -238,7 +239,7 @@ public class VariableInfo {
 
     /**
      * Returns the lexical scope of the variable.
-     * 
+     *
      * @return the lexical scope of the variable, either AT_BEGIN, AT_END, or
      *         NESTED.
      * @see #AT_BEGIN

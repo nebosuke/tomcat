@@ -16,7 +16,6 @@
  */
 package org.apache.catalina.core;
 
-
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
@@ -88,39 +87,40 @@ import org.apache.tomcat.util.res.StringManager;
  * following <code>ContainerEvent</code> events to listeners who register
  * themselves with <code>addContainerListener()</code>:
  * <table border=1>
+ *   <caption>ContainerEvents fired by this implementation</caption>
  *   <tr>
  *     <th>Type</th>
  *     <th>Data</th>
  *     <th>Description</th>
  *   </tr>
  *   <tr>
- *     <td align=center><code>addChild</code></td>
- *     <td align=center><code>Container</code></td>
+ *     <td><code>addChild</code></td>
+ *     <td><code>Container</code></td>
  *     <td>Child container added to this Container.</td>
  *   </tr>
  *   <tr>
- *     <td align=center><code>{@link #getPipeline() pipeline}.addValve</code></td>
- *     <td align=center><code>Valve</code></td>
+ *     <td><code>{@link #getPipeline() pipeline}.addValve</code></td>
+ *     <td><code>Valve</code></td>
  *     <td>Valve added to this Container.</td>
  *   </tr>
  *   <tr>
- *     <td align=center><code>removeChild</code></td>
- *     <td align=center><code>Container</code></td>
+ *     <td><code>removeChild</code></td>
+ *     <td><code>Container</code></td>
  *     <td>Child container removed from this Container.</td>
  *   </tr>
  *   <tr>
- *     <td align=center><code>{@link #getPipeline() pipeline}.removeValve</code></td>
- *     <td align=center><code>Valve</code></td>
+ *     <td><code>{@link #getPipeline() pipeline}.removeValve</code></td>
+ *     <td><code>Valve</code></td>
  *     <td>Valve removed from this Container.</td>
  *   </tr>
  *   <tr>
- *     <td align=center><code>start</code></td>
- *     <td align=center><code>null</code></td>
+ *     <td><code>start</code></td>
+ *     <td><code>null</code></td>
  *     <td>Container was started.</td>
  *   </tr>
  *   <tr>
- *     <td align=center><code>stop</code></td>
- *     <td align=center><code>null</code></td>
+ *     <td><code>stop</code></td>
+ *     <td><code>null</code></td>
  *     <td>Container was stopped.</td>
  *   </tr>
  * </table>
@@ -134,8 +134,7 @@ import org.apache.tomcat.util.res.StringManager;
 public abstract class ContainerBase extends LifecycleMBeanBase
         implements Container {
 
-    private static final org.apache.juli.logging.Log log=
-        org.apache.juli.logging.LogFactory.getLog( ContainerBase.class );
+    private static final Log log = LogFactory.getLog(ContainerBase.class);
 
     /**
      * Perform addChild with the permissions of this class.
@@ -143,10 +142,9 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      * this allows the XML parser to have fewer privileges than
      * Tomcat.
      */
-    protected class PrivilegedAddChild
-        implements PrivilegedAction<Void> {
+    protected class PrivilegedAddChild implements PrivilegedAction<Void> {
 
-        private Container child;
+        private final Container child;
 
         PrivilegedAddChild(Container child) {
             this.child = child;
@@ -305,6 +303,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     private int startStopThreads = 1;
     protected ThreadPoolExecutor startStopExecutor;
+
 
     // ------------------------------------------------------------- Properties
 
@@ -477,12 +476,10 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public Log getLogger() {
-
         if (logger != null)
-            return (logger);
+            return logger;
         logger = LogFactory.getLog(logName());
-        return (logger);
-
+        return logger;
     }
 
 
@@ -623,6 +620,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public void setCluster(Cluster cluster) {
+
         Cluster oldCluster = null;
         Lock writeLock = clusterLock.writeLock();
         writeLock.lock();
@@ -635,7 +633,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
 
             // Stop the old component if necessary
             if (getState().isAvailable() && (oldCluster != null) &&
-                    (oldCluster instanceof Lifecycle)) {
+                (oldCluster instanceof Lifecycle)) {
                 try {
                     ((Lifecycle) oldCluster).stop();
                 } catch (LifecycleException e) {
@@ -671,9 +669,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public String getName() {
-
-        return (name);
-
+        return name;
     }
 
 
@@ -702,11 +698,11 @@ public abstract class ContainerBase extends LifecycleMBeanBase
     /**
      * Return if children of this container will be started automatically when
      * they are added to this container.
+     *
+     * @return <code>true</code> if the children will be started
      */
     public boolean getStartChildren() {
-
-        return (startChildren);
-
+        return startChildren;
     }
 
 
@@ -730,9 +726,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public Container getParent() {
-
-        return (parent);
-
+        return parent;
     }
 
 
@@ -765,12 +759,11 @@ public abstract class ContainerBase extends LifecycleMBeanBase
     @Override
     public ClassLoader getParentClassLoader() {
         if (parentClassLoader != null)
-            return (parentClassLoader);
+            return parentClassLoader;
         if (parent != null) {
-            return (parent.getParentClassLoader());
+            return parent.getParentClassLoader();
         }
-        return (ClassLoader.getSystemClassLoader());
-
+        return ClassLoader.getSystemClassLoader();
     }
 
 
@@ -799,9 +792,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public Pipeline getPipeline() {
-
-        return (this.pipeline);
-
+        return this.pipeline;
     }
 
 
@@ -814,12 +805,12 @@ public abstract class ContainerBase extends LifecycleMBeanBase
     public Realm getRealm() {
 
         Lock l = realmLock.readLock();
+        l.lock();
         try {
-            l.lock();
             if (realm != null)
-                return (realm);
+                return realm;
             if (parent != null)
-                return (parent.getRealm());
+                return parent.getRealm();
             return null;
         } finally {
             l.unlock();
@@ -829,8 +820,8 @@ public abstract class ContainerBase extends LifecycleMBeanBase
 
     protected Realm getRealmInternal() {
         Lock l = realmLock.readLock();
+        l.lock();
         try {
-            l.lock();
             return realm;
         } finally {
             l.unlock();
@@ -846,10 +837,8 @@ public abstract class ContainerBase extends LifecycleMBeanBase
     public void setRealm(Realm realm) {
 
         Lock l = realmLock.writeLock();
-
+        l.lock();
         try {
-            l.lock();
-
             // Change components if necessary
             Realm oldRealm = this.realm;
             if (oldRealm == realm)
@@ -1044,9 +1033,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public void addPropertyChangeListener(PropertyChangeListener listener) {
-
         support.addPropertyChangeListener(listener);
-
     }
 
 
@@ -1058,13 +1045,12 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public Container findChild(String name) {
-
-        if (name == null)
-            return (null);
+        if (name == null) {
+            return null;
+        }
         synchronized (children) {
             return children.get(name);
         }
-
     }
 
 
@@ -1074,12 +1060,10 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      */
     @Override
     public Container[] findChildren() {
-
         synchronized (children) {
             Container results[] = new Container[children.size()];
             return children.values().toArray(results);
         }
-
     }
 
 
@@ -1510,7 +1494,6 @@ public abstract class ContainerBase extends LifecycleMBeanBase
 
     // ------------------------------------------------------ Protected Methods
 
-
     /**
      * Notify all container event listeners that a particular event has
      * occurred for this Container.  The default implementation performs
@@ -1534,7 +1517,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
 
 
     /**
-     * Return the abbreviated name of this container for logging messages
+     * @return the abbreviated name of this container for logging messages
      */
     protected String logName() {
 
@@ -1626,9 +1609,8 @@ public abstract class ContainerBase extends LifecycleMBeanBase
 
     // -------------------------------------- ContainerExecuteDelay Inner Class
 
-
     /**
-     * Private thread class to invoke the backgroundProcess method
+     * Private runnable class to invoke the backgroundProcess method
      * of this container and its children after a fixed delay.
      */
     protected class ContainerBackgroundProcessor implements Runnable {
@@ -1692,7 +1674,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
     }
 
 
-    // ----------------------------- Inner classes used with start/stop Executor
+    // ---------------------------- Inner classes used with start/stop Executor
 
     private static class StartChild implements Callable<Void> {
 
@@ -1744,5 +1726,4 @@ public abstract class ContainerBase extends LifecycleMBeanBase
             return thread;
         }
     }
-
 }

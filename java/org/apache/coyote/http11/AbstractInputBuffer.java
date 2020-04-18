@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.Request;
 import org.apache.tomcat.util.buf.ByteChunk;
+import org.apache.tomcat.util.http.HeaderUtil;
 import org.apache.tomcat.util.http.MimeHeaders;
 import org.apache.tomcat.util.http.parser.HttpParser;
 import org.apache.tomcat.util.net.AbstractEndpoint;
@@ -108,14 +109,20 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
     protected int lastActiveFilter;
 
 
+    /**
+     * Do HTTP headers with illegal names and/or values cause the request to be
+     * rejected? Note that the field name is not quite right but cannot be
+     * easily changed without breaking binary compatibility.
+     */
     protected boolean rejectIllegalHeaderName;
 
 
     protected HttpParser httpParser;
+    protected byte prevChr = 0;
+    protected byte chr = 0;
 
 
     // ------------------------------------------------------------- Properties
-
 
     /**
      * Add an input filter to the filter library.
@@ -124,7 +131,7 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
 
         // FIXME: Check for null ?
 
-        InputFilter[] newFilterLibrary = 
+        InputFilter[] newFilterLibrary =
             new InputFilter[filterLibrary.length + 1];
         for (int i = 0; i < filterLibrary.length; i++) {
             newFilterLibrary[i] = filterLibrary[i];
@@ -177,16 +184,31 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
     }
 
 
+    protected String parseInvalid(int startPos, byte[] buffer) {
+        // Look for the next space
+        int pos = startPos;
+        while (pos < lastValid && buffer[pos] != 0x20) {
+            pos++;
+        }
+        String result = HeaderUtil.toPrintableString(buffer, startPos, pos - startPos);
+        if (pos == lastValid) {
+            // Ran out of buffer rather than found a space
+            result = result + "...";
+        }
+        return result;
+    }
+
+
     /**
      * Implementations are expected to call {@link Request#setStartTime(long)}
      * as soon as the first byte is read from the request.
      */
     public abstract boolean parseRequestLine(boolean useAvailableDataOnly)
         throws IOException;
-    
+
     public abstract boolean parseHeaders() throws IOException;
-    
-    protected abstract boolean fill(boolean block) throws IOException; 
+
+    protected abstract boolean fill(boolean block) throws IOException;
 
     protected abstract void init(SocketWrapper<S> socketWrapper,
             AbstractEndpoint<S> endpoint) throws IOException;
@@ -196,7 +218,7 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
 
 
     /**
-     * Recycle the input buffer. This should be called when closing the 
+     * Recycle the input buffer. This should be called when closing the
      * connection.
      */
     public void recycle() {
@@ -209,18 +231,19 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
             activeFilters[i].recycle();
         }
 
+        prevChr = 0;
+        chr = 0;
         lastValid = 0;
         pos = 0;
         lastActiveFilter = -1;
         parsingHeader = true;
         swallowInput = true;
-
     }
 
 
     /**
      * End processing of current HTTP request.
-     * Note: All bytes of the current request should have been already 
+     * Note: All bytes of the current request should have been already
      * consumed. This method only resets all the pointers so that we are ready
      * to parse the next HTTP request.
      */
@@ -251,7 +274,7 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
 
     /**
      * End request (consumes leftover bytes).
-     * 
+     *
      * @throws IOException an underlying I/O error occurred
      */
     public void endRequest() throws IOException {
@@ -261,7 +284,7 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
             pos = pos - extraBytes;
         }
     }
-    
+
 
     /**
      * Available bytes in the buffers (note that due to encoding, this may not
@@ -284,7 +307,7 @@ public abstract class AbstractInputBuffer<S> implements InputBuffer{
      * Read some bytes.
      */
     @Override
-    public int doRead(ByteChunk chunk, Request req) 
+    public int doRead(ByteChunk chunk, Request req)
         throws IOException {
 
         if (lastActiveFilter == -1)

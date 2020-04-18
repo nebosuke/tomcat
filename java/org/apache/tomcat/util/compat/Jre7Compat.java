@@ -20,6 +20,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -30,7 +31,14 @@ import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.res.StringManager;
+
 class Jre7Compat extends JreCompat {
+
+    private static final Log log = LogFactory.getLog(Jre7Compat.class);
+    private static final StringManager sm = StringManager.getManager(Jre7Compat.class);
 
     private static final int RUNTIME_MAJOR_VERSION = 7;
 
@@ -49,6 +57,7 @@ class Jre7Compat extends JreCompat {
     private static final Method resultSetGetObjectName;
     private static final Method statementCloseOnCompletion;
     private static final Method statementIsCloseOnCompletion;
+    private static final Method getLoopbackAddress;
 
     static {
         Method m1 = null;
@@ -65,8 +74,11 @@ class Jre7Compat extends JreCompat {
         Method m12 = null;
         Method m13 = null;
         Method m14 = null;
+        Method m15 = null;
         Constructor<GZIPOutputStream> c = null;
         try {
+            // Order is important for the error handling below.
+            // Must look up m1 first.
             m1 = Locale.class.getMethod("forLanguageTag", String.class);
             c = GZIPOutputStream.class.getConstructor(OutputStream.class, boolean.class);
             m2 = CallableStatement.class.getMethod("getObject", int.class, Class.class);
@@ -76,16 +88,24 @@ class Jre7Compat extends JreCompat {
             m6 = Connection.class.getMethod("abort", Executor.class);
             m7 = Connection.class.getMethod("setNetworkTimeout", Executor.class, int.class);
             m8 = Connection.class.getMethod("getNetworkTimeout");
-            m9 = DatabaseMetaData.class.getMethod("getPseudoColumns");
+            m9 = DatabaseMetaData.class.getMethod("getPseudoColumns", String.class, String.class, String.class, String.class);
             m10 = DatabaseMetaData.class.getMethod("generatedKeyAlwaysReturned");
             m11 = ResultSet.class.getMethod("getObject", int.class, Class.class);
             m12 = ResultSet.class.getMethod("getObject", String.class, Class.class);
             m13 = Statement.class.getMethod("closeOnCompletion");
             m14 = Statement.class.getMethod("isCloseOnCompletion");
+            m15 = InetAddress.class.getMethod("getLoopbackAddress");
         } catch (SecurityException e) {
             // Should never happen
+            log.error(sm.getString("jre7Compat.unexpected"), e);
         } catch (NoSuchMethodException e) {
-            // Expected on Java < 7
+            if (m1 == null) {
+                // Must be pre-Java 7
+                log.debug(sm.getString("jre7Compat.javaPre7"), e);
+            } else {
+                // Should never happen - signature error in lookup?
+                log.error(sm.getString("jre7Compat.unexpected"), e);
+            }
         }
         forLanguageTagMethod = m1;
         gzipOutputStreamConstructor = c;
@@ -102,6 +122,7 @@ class Jre7Compat extends JreCompat {
         resultSetGetObjectName = m12;
         statementCloseOnCompletion = m13;
         statementIsCloseOnCompletion = m14;
+        getLoopbackAddress = m15;
     }
 
 
@@ -333,6 +354,20 @@ class Jre7Compat extends JreCompat {
             throw new SQLException(e);
         } catch (InvocationTargetException e) {
             throw new SQLException(e);
+        }
+    }
+
+
+    @Override
+    public InetAddress getLoopbackAddress() {
+        try {
+            return (InetAddress) getLoopbackAddress.invoke(null);
+        } catch (IllegalArgumentException e) {
+            throw new UnsupportedOperationException(e);
+       } catch (IllegalAccessException e) {
+           throw new UnsupportedOperationException(e);
+        } catch (InvocationTargetException e) {
+            throw new UnsupportedOperationException(e);
         }
     }
 

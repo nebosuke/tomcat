@@ -145,13 +145,13 @@
       <attribute name="cors.allowed.methods" required="false">
         <p>A comma separated list of HTTP methods that can be used to access the
         resource, using cross-origin requests. These are the methods which will
-        also be included as part of <code>Access-Control-Allow-Methods</code> 
+        also be included as part of <code>Access-Control-Allow-Methods</code>
         header in pre-flight response. Eg: <code>GET, POST</code>.
         <strong>Defaults:</strong> <code>GET, POST, HEAD, OPTIONS</code></p>
       </attribute>
       <attribute name="cors.allowed.headers" required="false">
         <p>A comma separated list of request headers that can be used when
-        making an actual request. These headers will also be returned as part 
+        making an actual request. These headers will also be returned as part
         of <code>Access-Control-Allow-Headers</code> header in a pre-flight
         response. Eg: <code>Origin,Accept</code>. <strong>Defaults:</strong>
         <code>Origin, Accept, X-Requested-With, Content-Type,
@@ -159,8 +159,8 @@
       </attribute>
       <attribute name="cors.exposed.headers" required="false">
         <p>A comma separated list of headers other than simple response headers
-        that browsers are allowed to access. These are the headers which will 
-        also be included as part of <code>Access-Control-Expose-Headers</code> 
+        that browsers are allowed to access. These are the headers which will
+        also be included as part of <code>Access-Control-Expose-Headers</code>
         header in the pre-flight response. Eg:
         <code>X-CUSTOM-HEADER-PING,X-CUSTOM-HEADER-PONG</code>.
         <strong>Default:</strong> None. Non-simple headers are not exposed by
@@ -247,7 +247,7 @@
         </ul>
       </li>
       <li><strong>cors.request.headers:</strong> Request headers sent as
-          <code>Access-Control-Request-Headers</code> header, for a pre-flight 
+          <code>Access-Control-Request-Headers</code> header, for a pre-flight
           request.
       </li>
     </ul>
@@ -923,7 +923,7 @@ FINE: Request "/docs/config/manager.html" with response status "200"
       </attribute>
 
       <attribute name="antiClickJackingOption" required="false">
-        <p>What value should be used for the ant click-jacking header? Must be
+        <p>What value should be used for the anticlick-jacking header? Must be
         one of <code>DENY</code>, <code>SAMEORIGIN</code>,
         <code>ALLOW-FROM </code> (case-insensitive). If not specified, the
         default value of <code>DENY</code> will be used.</p>
@@ -1537,7 +1537,7 @@ FINE: Request "/docs/config/manager.html" with response status "200"
     <p>
     Note : <code>x-forwarded-by</code> holds the trusted proxy <code>proxy1</code>.
     <code>x-forwarded-by</code> holds <code>140.211.11.130</code> because
-    <code>untrusted-proxy</code> is not trusted and thus, we can not trust that
+    <code>untrusted-proxy</code> is not trusted and thus, we cannot trust that
     <code>untrusted-proxy</code> is the actual remote ip.
     <code>request.remoteAddr</code> is <code>untrusted-proxy</code> that is an IP
     verified by <code>proxy1</code>.
@@ -1597,6 +1597,12 @@ FINE: Request "/docs/config/manager.html" with response status "200"
         default of <code>X-Forwarded-Proto</code> is used.</p>
       </attribute>
 
+      <attribute name="hostHeader" required="false">
+        <p>Name of the HTTP Header read by this valve that holds the host
+        used by the client to connect to the proxy. If not specified, the
+        default of <code>null</code> is used.</p>
+      </attribute>
+
       <attribute name="portHeader" required="false">
         <p>Name of the HTTP Header read by this valve that holds the port
         used by the client to connect to the proxy. If not specified, the
@@ -1621,6 +1627,13 @@ FINE: Request "/docs/config/manager.html" with response status "200"
         when the <strong>protocolHeader</strong> indicates <code>https</code>
         protocol and no <strong>portHeader</strong> is present. If not
         specified, the default of <code>443</code> is used.</p>
+      </attribute>
+
+      <attribute name="changeLocalName" required="false">
+        <p>If <code>true</code>, the value returned by
+        <code>ServletRequest.getLocalName()</code> and
+        <code>ServletRequest.getServerName()</code> is modified by the this
+        filter. If not specified, the default of <code>false</code> is used.</p>
       </attribute>
 
       <attribute name="changeLocalPort" required="false">

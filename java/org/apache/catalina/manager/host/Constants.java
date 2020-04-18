@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -81,7 +81,7 @@ public class Constants {
     public static final String HTML_TAIL_SECTION =
         "<hr size=\"1\" noshade=\"noshade\">\n" +
         "<center><font size=\"-1\" color=\"#525D76\">\n" +
-        " <em>Copyright &copy; 1999-2019, Apache Software Foundation</em>" +
+        " <em>Copyright &copy; 1999-2020, Apache Software Foundation</em>" +
         "</font></center>\n" +
         "\n" +
         "</body>\n" +

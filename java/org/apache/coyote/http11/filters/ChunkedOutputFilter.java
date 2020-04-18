@@ -14,7 +14,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.coyote.http11.filters;
 
 import java.io.IOException;
@@ -27,7 +26,7 @@ import org.apache.tomcat.util.buf.HexUtils;
 
 /**
  * Chunked output filter.
- * 
+ *
  * @author Remy Maucherat
  */
 public class ChunkedOutputFilter implements OutputFilter {
@@ -44,7 +43,7 @@ public class ChunkedOutputFilter implements OutputFilter {
 
 
     static {
-        byte[] END_CHUNK_BYTES = {(byte) '0', (byte) '\r', (byte) '\n', 
+        byte[] END_CHUNK_BYTES = {(byte) '0', (byte) '\r', (byte) '\n',
                                   (byte) '\r', (byte) '\n'};
         END_CHUNK.setBytes(END_CHUNK_BYTES, 0, END_CHUNK_BYTES.length);
     }
@@ -92,7 +91,7 @@ public class ChunkedOutputFilter implements OutputFilter {
 
     /**
      * Write some bytes.
-     * 
+     *
      * @return number of bytes written by the filter
      */
     @Override
@@ -106,14 +105,14 @@ public class ChunkedOutputFilter implements OutputFilter {
         }
 
         // Calculate chunk header
-        int pos = 7;
+        int pos = 8;
         int current = result;
         while (current > 0) {
             int digit = current % 16;
             current = current / 16;
-            chunkLength[pos--] = HexUtils.getHex(digit);
+            chunkLength[--pos] = HexUtils.getHex(digit);
         }
-        chunkHeader.setBytes(chunkLength, pos + 1, 9 - pos);
+        chunkHeader.setBytes(chunkLength, pos, 10 - pos);
         buffer.doWrite(chunkHeader, res);
 
         buffer.doWrite(chunk, res);
@@ -122,7 +121,6 @@ public class ChunkedOutputFilter implements OutputFilter {
         buffer.doWrite(chunkHeader, res);
 
         return result;
-
     }
 
 
@@ -134,46 +132,27 @@ public class ChunkedOutputFilter implements OutputFilter {
 
     // --------------------------------------------------- OutputFilter Methods
 
-
-    /**
-     * Some filters need additional parameters from the response. All the 
-     * necessary reading can occur in that method, as this method is called
-     * after the response header processing is complete.
-     */
     @Override
     public void setResponse(Response response) {
         // NOOP: No need for parameters from response in this filter
     }
 
 
-    /**
-     * Set the next buffer in the filter pipeline.
-     */
     @Override
     public void setBuffer(OutputBuffer buffer) {
         this.buffer = buffer;
     }
 
 
-    /**
-     * End the current request. It is acceptable to write extra bytes using
-     * buffer.doWrite during the execution of this method.
-     */
     @Override
-    public long end()
-        throws IOException {
-
+    public long end() throws IOException {
         // Write end chunk
         buffer.doWrite(END_CHUNK, null);
-        
-        return 0;
 
+        return 0;
     }
 
 
-    /**
-     * Make the filter ready to process the next request.
-     */
     @Override
     public void recycle() {
         // NOOP: Nothing to recycle

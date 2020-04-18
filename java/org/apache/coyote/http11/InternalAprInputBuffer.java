@@ -20,7 +20,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.Request;
@@ -30,6 +29,7 @@ import org.apache.tomcat.jni.Socket;
 import org.apache.tomcat.jni.Status;
 import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.buf.MessageBytes;
+import org.apache.tomcat.util.http.HeaderUtil;
 import org.apache.tomcat.util.http.parser.HttpParser;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapper;
@@ -52,7 +52,7 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
      * Alternate constructor.
      */
     public InternalAprInputBuffer(Request request, int headerBufferSize,
-            boolean rejectIllegalHeaderName, HttpParser httpParser) {
+            boolean rejectIllegalHeader, HttpParser httpParser) {
 
         this.request = request;
         headers = request.getMimeHeaders();
@@ -64,7 +64,7 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
             bbuf = ByteBuffer.allocateDirect((headerBufferSize / 1500 + 1) * 1500);
         }
 
-        this.rejectIllegalHeaderName = rejectIllegalHeaderName;
+        this.rejectIllegalHeaderName = rejectIllegalHeader;
         this.httpParser = httpParser;
 
         inputStreamInputBuffer = new SocketInputBuffer();
@@ -130,7 +130,6 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
         // Skipping blank lines
         //
 
-        byte chr = 0;
         do {
 
             // Read new bytes if needed
@@ -147,7 +146,7 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                 request.setStartTime(System.currentTimeMillis());
             }
             chr = buf[pos++];
-        } while ((chr == Constants.CR) || (chr == Constants.LF));
+        } while (chr == Constants.CR || chr == Constants.LF);
 
         pos--;
 
@@ -183,7 +182,8 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                 space = true;
                 request.method().setBytes(buf, start, pos - start);
             } else if (!HttpParser.isToken(buf[pos])) {
-                throw new IllegalArgumentException(sm.getString("iib.invalidmethod"));
+                String invalidMethodValue = parseInvalid(start, buf);
+                throw new IllegalArgumentException(sm.getString("iib.invalidmethod", invalidMethodValue));
             }
 
             pos++;
@@ -223,32 +223,49 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                     throw new EOFException(sm.getString("iib.eof.error"));
             }
 
+            if (buf[pos -1] == Constants.CR && buf[pos] != Constants.LF) {
+                // CR not followed by LF so not an HTTP/0.9 request and
+                // therefore invalid. Trigger error handling.
+                // Avoid unknown protocol triggering an additional error
+                request.protocol().setString(Constants.HTTP_11);
+                String invalidRequestTarget = parseInvalid(start, buf);
+                throw new IllegalArgumentException(sm.getString("iib.invalidRequestTarget", invalidRequestTarget));
+            }
+
             // Spec says single SP but it also says be tolerant of HT
             if (buf[pos] == Constants.SP || buf[pos] == Constants.HT) {
                 space = true;
                 end = pos;
-            } else if ((buf[pos] == Constants.CR)
-                       || (buf[pos] == Constants.LF)) {
+            } else if (buf[pos] == Constants.CR) {
+                // HTTP/0.9 style request. CR is optional. LF is not.
+            } else if (buf[pos] == Constants.LF) {
                 // HTTP/0.9 style request
-                eol = true;
+                // Stop this processing loop
                 space = true;
-                end = pos;
+                // Set blank protocol (indicates HTTP/0.9)
+                request.protocol().setString("");
+                // Skip the protocol processing
+                eol = true;
+                if (buf[pos - 1] == Constants.CR) {
+                    end = pos - 1;
+                } else {
+                    end = pos;
+                }
             } else if ((buf[pos] == Constants.QUESTION) && (questionPos == -1)) {
                 questionPos = pos;
             } else if (questionPos != -1 && !httpParser.isQueryRelaxed(buf[pos])) {
                 // %nn decoding will be checked at the point of decoding
-                throw new IllegalArgumentException(sm.getString("iib.invalidRequestTarget"));
+                String invalidRequestTarget = parseInvalid(start, buf);
+                throw new IllegalArgumentException(sm.getString("iib.invalidRequestTarget", invalidRequestTarget));
             } else if (httpParser.isNotRequestTargetRelaxed(buf[pos])) {
                 // This is a general check that aims to catch problems early
                 // Detailed checking of each part of the request target will
                 // happen in AbstractHttp11Processor#prepareRequest()
-                throw new IllegalArgumentException(sm.getString("iib.invalidRequestTarget"));
+                String invalidRequestTarget = parseInvalid(start, buf);
+                throw new IllegalArgumentException(sm.getString("iib.invalidRequestTarget", invalidRequestTarget));
             }
-
             pos++;
-
         }
-
         request.unparsedURI().setBytes(buf, start, end - start);
         if (questionPos >= 0) {
             request.queryString().setBytes(buf, questionPos + 1,
@@ -259,7 +276,7 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
         }
 
         // Spec says single SP but also says be tolerant of multiple and/or HT
-        while (space) {
+        while (space && !eol) {
             // Read new bytes if needed
             if (pos >= lastValid) {
                 if (!fill())
@@ -291,13 +308,13 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
             }
 
             if (buf[pos] == Constants.CR) {
-                end = pos;
-            } else if (buf[pos] == Constants.LF) {
-                if (end == 0)
-                    end = pos;
+                // Possible end of request line. Need LF next.
+            } else if (buf[pos - 1] == Constants.CR && buf[pos] == Constants.LF) {
+                end = pos - 1;
                 eol = true;
             } else if (!HttpParser.isHttpProtocol(buf[pos])) {
-                throw new IllegalArgumentException(sm.getString("iib.invalidHttpProtocol"));
+                String invalidProtocol = parseInvalid(start, buf);
+                throw new IllegalArgumentException(sm.getString("iib.invalidHttpProtocol", invalidProtocol));
             }
 
             pos++;
@@ -306,12 +323,13 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
 
         if ((end - start) > 0) {
             request.protocol().setBytes(buf, start, end - start);
-        } else {
-            request.protocol().setString("");
+        }
+
+        if (request.protocol().isNull()) {
+            throw new IllegalArgumentException(sm.getString("iib.invalidHttpProtocol"));
         }
 
         return true;
-
     }
 
 
@@ -343,14 +361,8 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
      * HTTP header parsing is done
      */
     @SuppressWarnings("null") // headerValue cannot be null
-    private boolean parseHeader()
-        throws IOException {
+    private boolean parseHeader() throws IOException {
 
-        //
-        // Check for blank line
-        //
-
-        byte chr = 0;
         while (true) {
 
             // Read new bytes if needed
@@ -359,23 +371,28 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                     throw new EOFException(sm.getString("iib.eof.error"));
             }
 
+            prevChr = chr;
             chr = buf[pos];
 
-            if (chr == Constants.CR) {
-                // Skip
-            } else if (chr == Constants.LF) {
+            if (chr == Constants.CR && prevChr != Constants.CR) {
+                // Possible start of CRLF - process the next byte.
+            } else if (prevChr == Constants.CR && chr == Constants.LF) {
                 pos++;
                 return false;
             } else {
+                if (prevChr == Constants.CR) {
+                    // Must have read two bytes (first was CR, second was not LF)
+                    pos--;
+                }
                 break;
             }
 
             pos++;
-
         }
 
         // Mark the current buffer position
         int start = pos;
+        int lineStart = start;
 
         //
         // Reading the header name
@@ -400,7 +417,7 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                 // Non-token characters are illegal in header names
                 // Parsing continues so the error can be reported in context
                 // skipLine() will handle the error
-                skipLine(start);
+                skipLine(lineStart, start);
                 return true;
             }
             chr = buf[pos];
@@ -455,10 +472,24 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                         throw new EOFException(sm.getString("iib.eof.error"));
                 }
 
-                if (buf[pos] == Constants.CR) {
-                    // Skip
-                } else if (buf[pos] == Constants.LF) {
+                prevChr = chr;
+                chr = buf[pos];
+                if (chr == Constants.CR) {
+                    // Possible start of CRLF - process the next byte.
+                } else if (prevChr == Constants.CR && chr == Constants.LF) {
                     eol = true;
+                } else if (prevChr == Constants.CR) {
+                    // Invalid value
+                    // Delete the header (it will be the most recent one)
+                    headers.removeHeader(headers.size() - 1);
+                    skipLine(lineStart, start);
+                    return true;
+                } else if (chr != Constants.HT && HttpParser.isControl(chr)) {
+                    // Invalid value
+                    // Delete the header (it will be the most recent one)
+                    headers.removeHeader(headers.size() - 1);
+                    skipLine(lineStart, start);
+                    return true;
                 } else if (buf[pos] == Constants.SP) {
                     buf[realPos] = buf[pos];
                     realPos++;
@@ -483,14 +514,14 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                     throw new EOFException(sm.getString("iib.eof.error"));
             }
 
-            chr = buf[pos];
-            if ((chr != Constants.SP) && (chr != Constants.HT)) {
+            byte peek = buf[pos];
+            if (peek != Constants.SP && peek != Constants.HT) {
                 validLine = false;
             } else {
                 eol = false;
                 // Copying one extra space in the buffer (since there must
                 // be at least one space inserted between the lines)
-                buf[realPos] = chr;
+                buf[realPos] = peek;
                 realPos++;
             }
 
@@ -504,7 +535,7 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
     }
 
 
-    private void skipLine(int start) throws IOException {
+    private void skipLine(int lineStart, int start) throws IOException {
         boolean eol = false;
         int lastRealByte = start;
         if (pos - 1 > start) {
@@ -519,9 +550,12 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
                     throw new EOFException(sm.getString("iib.eof.error"));
             }
 
-            if (buf[pos] == Constants.CR) {
+            prevChr = chr;
+            chr = buf[pos];
+
+            if (chr == Constants.CR) {
                 // Skip
-            } else if (buf[pos] == Constants.LF) {
+            } else if (prevChr == Constants.CR && chr == Constants.LF) {
                 eol = true;
             } else {
                 lastRealByte = pos;
@@ -530,8 +564,8 @@ public class InternalAprInputBuffer extends AbstractInputBuffer<Long> {
         }
 
         if (rejectIllegalHeaderName || log.isDebugEnabled()) {
-            String message = sm.getString("iib.invalidheader", new String(buf, start,
-                    lastRealByte - start + 1, Charset.forName("ISO-8859-1")));
+            String message = sm.getString("iib.invalidheader", HeaderUtil.toPrintableString(
+                    buf, lineStart, lastRealByte - lineStart + 1));
             if (rejectIllegalHeaderName) {
                 throw new IllegalArgumentException(message);
             }

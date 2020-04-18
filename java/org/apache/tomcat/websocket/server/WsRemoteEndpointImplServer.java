@@ -41,8 +41,7 @@ import org.apache.tomcat.websocket.WsRemoteEndpointImplBase;
  */
 public class WsRemoteEndpointImplServer extends WsRemoteEndpointImplBase {
 
-    private static final StringManager sm =
-            StringManager.getManager(Constants.PACKAGE_NAME);
+    private static final StringManager sm = StringManager.getManager(WsRemoteEndpointImplServer.class);
     private final Log log = LogFactory.getLog(WsRemoteEndpointImplServer.class); // must not be static
 
     private static final Queue<OnResultRunnable> onResultRunnables =
@@ -55,7 +54,6 @@ public class WsRemoteEndpointImplServer extends WsRemoteEndpointImplBase {
     private volatile ByteBuffer[] buffers = null;
 
     private volatile long timeoutExpiry = -1;
-    private volatile boolean close;
 
 
     public WsRemoteEndpointImplServer(AbstractServletOutputStream sos,
@@ -100,9 +98,6 @@ public class WsRemoteEndpointImplServer extends WsRemoteEndpointImplBase {
                 if (complete) {
                     wsWriteTimeout.unregister(this);
                     clearHandler(null, useDispatch);
-                    if (close) {
-                        close();
-                    }
                     break;
                 }
             }
@@ -112,9 +107,9 @@ public class WsRemoteEndpointImplServer extends WsRemoteEndpointImplBase {
             clearHandler(ioe, useDispatch);
             close();
         }
+
         if (!complete) {
             // Async write is in progress
-
             long timeout = getSendTimeout();
             if (timeout > 0) {
                 // Register with timeout thread
@@ -136,7 +131,7 @@ public class WsRemoteEndpointImplServer extends WsRemoteEndpointImplBase {
         }
         try {
             sos.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             if (log.isInfoEnabled()) {
                 log.info(sm.getString("wsRemoteEndpointServer.closeFailed"), e);
             }

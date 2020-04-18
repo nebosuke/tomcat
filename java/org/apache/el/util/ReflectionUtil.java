@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,7 @@ import org.apache.el.lang.ELSupport;
 
 /**
  * Utilities for Managing Serialization and Reflection
- * 
+ *
  * @author Jacob Hookom [jacob@hookom.net]
  */
 public class ReflectionUtil {
@@ -78,9 +78,12 @@ public class ReflectionUtil {
     }
 
     /**
-     * Converts an array of Class names to Class types
-     * @param s
-     * @throws ClassNotFoundException
+     * Converts an array of Class names to Class types.
+     * @param s  The array of class names
+     * @return An array of Class instance where the element at index i in the
+     *         result is an instance of the class with the name at index i in
+     *         the input
+     * @throws ClassNotFoundException If a class of a given name cannot be found
      */
     public static Class<?>[] toTypeArray(String[] s) throws ClassNotFoundException {
         if (s == null)
@@ -93,8 +96,10 @@ public class ReflectionUtil {
     }
 
     /**
-     * Converts an array of Class types to Class names
-     * @param c
+     * Converts an array of Class types to Class names.
+     * @param c The array of class instances
+     * @return An array of Class names where the element at index i in the
+     *         result is the name of the class instance at index i in the input
      */
     public static String[] toTypeNameArray(Class<?>[] c) {
         if (c == null)
@@ -113,7 +118,8 @@ public class ReflectionUtil {
      * @param paramTypes the parameter types to use
      * @param paramValues the parameter values
      * @return the method specified
-     * @throws MethodNotFoundException
+     * @throws MethodNotFoundException If a method cannot be found that matches
+     *         the given criteria
      */
     /*
      * This class duplicates code in javax.el.Util. When making changes keep
@@ -123,6 +129,7 @@ public class ReflectionUtil {
     public static Method getMethod(Object base, Object property,
             Class<?>[] paramTypes, Object[] paramValues)
             throws MethodNotFoundException {
+
         if (base == null || property == null) {
             throw new MethodNotFoundException(MessageFactory.get(
                     "error.method.notfound", base, property,
@@ -131,7 +138,7 @@ public class ReflectionUtil {
 
         String methodName = (property instanceof String) ? (String) property
                 : property.toString();
-        
+
         int paramCount;
         if (paramTypes == null) {
             paramCount = 0;
@@ -141,13 +148,13 @@ public class ReflectionUtil {
 
         Method[] methods = base.getClass().getMethods();
         Map<Method,MatchResult> candidates = new HashMap<Method,MatchResult>();
-        
+
         for (Method m : methods) {
             if (!m.getName().equals(methodName)) {
                 // Method name doesn't match
                 continue;
             }
-            
+
             Class<?>[] mParamTypes = m.getParameterTypes();
             int mParamCount;
             if (mParamTypes == null) {
@@ -155,14 +162,14 @@ public class ReflectionUtil {
             } else {
                 mParamCount = mParamTypes.length;
             }
-            
+
             // Check the number of parameters
             if (!(paramCount == mParamCount ||
                     (m.isVarArgs() && paramCount >= mParamCount))) {
                 // Method has wrong number of parameters
                 continue;
             }
-            
+
             // Check the parameters match
             int exactMatch = 0;
             int assignableMatch = 0;
@@ -213,13 +220,13 @@ public class ReflectionUtil {
             if (noMatch) {
                 continue;
             }
-            
+
             // If a method is found where every parameter matches exactly,
             // return it
             if (exactMatch == paramCount) {
-                return getMethod(base.getClass(), m);
+                return getMethod(base.getClass(), base, m);
             }
-            
+
             candidates.put(m, new MatchResult(
                     exactMatch, assignableMatch, coercibleMatch, m.isBridge()));
         }
@@ -247,7 +254,7 @@ public class ReflectionUtil {
             } else {
                 match = null;
             }
-            
+
             if (match == null) {
                 // If multiple methods have the same matching number of parameters
                 // the match is ambiguous so throw an exception
@@ -256,15 +263,15 @@ public class ReflectionUtil {
                         paramString(paramTypes)));
                 }
         }
-        
+
         // Handle case where no match at all was found
         if (match == null) {
             throw new MethodNotFoundException(MessageFactory.get(
                         "error.method.notfound", base, property,
                         paramString(paramTypes)));
         }
-        
-        return getMethod(base.getClass(), match);
+
+        return getMethod(base.getClass(), base, match);
     }
 
     /*
@@ -275,10 +282,10 @@ public class ReflectionUtil {
             Class<?>[] paramTypes) {
         // Identify which parameter isn't an exact match
         Method m = candidates.iterator().next();
-        
+
         int nonMatchIndex = 0;
         Class<?> nonMatchClass = null;
-        
+
         for (int i = 0; i < paramTypes.length; i++) {
             if (m.getParameterTypes()[i] != paramTypes[i]) {
                 nonMatchIndex = i;
@@ -286,7 +293,7 @@ public class ReflectionUtil {
                 break;
             }
         }
-        
+
         if (nonMatchClass == null) {
             // Null will always be ambiguous
             return null;
@@ -300,7 +307,7 @@ public class ReflectionUtil {
                return null;
            }
         }
-        
+
         // Can't be null
         Class<?> superClass = nonMatchClass.getSuperclass();
         while (superClass != null) {
@@ -312,7 +319,7 @@ public class ReflectionUtil {
             }
             superClass = superClass.getSuperclass();
         }
-        
+
         // Treat instances of Number as a special case
         Method match = null;
         if (Number.class.isAssignableFrom(nonMatchClass)) {
@@ -393,8 +400,13 @@ public class ReflectionUtil {
      * This class duplicates code in javax.el.Util. When making changes keep
      * the code in sync.
      */
-    private static Method getMethod(Class<?> type, Method m) {
-        if (m == null || Modifier.isPublic(type.getModifiers())) {
+    private static Method getMethod(Class<?> type, Object base, Method m) {
+        JreCompat jreCompat = JreCompat.getInstance();
+        // If base is null, method MUST be static
+        // If base is non-null, method may be static or non-static
+        if (m == null ||
+                (Modifier.isPublic(type.getModifiers()) &&
+                        (jreCompat.canAcccess(base, m) || base != null && jreCompat.canAcccess(null, m)))) {
             return m;
         }
         Class<?>[] inf = type.getInterfaces();
@@ -402,7 +414,7 @@ public class ReflectionUtil {
         for (int i = 0; i < inf.length; i++) {
             try {
                 mp = inf[i].getMethod(m.getName(), m.getParameterTypes());
-                mp = getMethod(mp.getDeclaringClass(), mp);
+                mp = getMethod(mp.getDeclaringClass(), base, mp);
                 if (mp != null) {
                     return mp;
                 }
@@ -414,7 +426,7 @@ public class ReflectionUtil {
         if (sup != null) {
             try {
                 mp = sup.getMethod(m.getName(), m.getParameterTypes());
-                mp = getMethod(mp.getDeclaringClass(), mp);
+                mp = getMethod(mp.getDeclaringClass(), base, mp);
                 if (mp != null) {
                     return mp;
                 }

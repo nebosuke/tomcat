@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -77,7 +77,7 @@ public class JspConfig {
 
         try {
             webXml = new WebXml(ctxt);
-            
+
             boolean validate = Boolean.parseBoolean(
                     ctxt.getInitParameter(Constants.XML_VALIDATION_INIT_PARAM));
             String blockExternalString =
@@ -245,7 +245,7 @@ public class JspConfig {
                             defaultIsELIgnored,
                             defaultIsScriptingInvalid,
                             null, null, null,
-                            defaultDeferedSyntaxAllowedAsLiteral, 
+                            defaultDeferedSyntaxAllowedAsLiteral,
                             defaultTrimDirectiveWhitespaces,
                             defaultDefaultContentType,
                             defaultBuffer,
@@ -296,6 +296,7 @@ public class JspConfig {
      * Find a property that best matches the supplied resource.
      * @param uri the resource supplied.
      * @return a JspProperty indicating the best match, or some default.
+     * @throws JasperException Not used
      */
     public JspProperty findJspProperty(String uri) throws JasperException {
 
@@ -451,14 +452,17 @@ public class JspConfig {
         }
 
         return new JspProperty(isXml, isELIgnored, isScriptingInvalid,
-                pageEncoding, includePreludes, includeCodas, 
+                pageEncoding, includePreludes, includeCodas,
                 isDeferedSyntaxAllowedAsLiteral, isTrimDirectiveWhitespaces,
                 defaultContentType, buffer, errorOnUndeclaredNamespace);
     }
 
     /**
-     * To find out if an uri matches an url pattern in jsp config.  If so,
+     * To find out if a uri matches a url pattern in jsp config.  If so,
      * then the uri is a JSP page.  This is used primarily for jspc.
+     * @param uri The path to check
+     * @return <code>true</code> if the path denotes a JSP page
+     * @throws JasperException Not used
      */
     public boolean isJspPage(String uri) throws JasperException {
 
@@ -544,7 +548,7 @@ public class JspConfig {
         public JspProperty(String isXml, String elIgnored,
                 String scriptingInvalid, String pageEncoding,
                 Vector<String> includePrelude, Vector<String> includeCoda,
-                String deferedSyntaxAllowedAsLiteral, 
+                String deferedSyntaxAllowedAsLiteral,
                 String trimDirectiveWhitespaces,
                 String defaultContentType,
                 String buffer,
@@ -586,23 +590,23 @@ public class JspConfig {
         public Vector<String> getIncludeCoda() {
             return includeCoda;
         }
-        
+
         public String isDeferedSyntaxAllowedAsLiteral() {
             return deferedSyntaxAllowedAsLiteral;
         }
-        
+
         public String isTrimDirectiveWhitespaces() {
             return trimDirectiveWhitespaces;
         }
-        
+
         public String getDefaultContentType() {
             return defaultContentType;
         }
-        
+
         public String getBuffer() {
             return buffer;
         }
-        
+
         public String isErrorOnUndeclaredNamespace() {
             return errorOnUndeclaredNamespace;
         }

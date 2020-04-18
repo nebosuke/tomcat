@@ -19,9 +19,12 @@ package org.apache.tomcat.util.compat;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.UnknownHostException;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -231,6 +234,32 @@ public class JreCompat {
     }
 
 
+    public InetAddress getLoopbackAddress() {
+        // Javadoc for getByName() states that calling with null will return one
+        // of the loopback addresses
+        InetAddress result = null;
+        try {
+            result = InetAddress.getByName(null);
+        } catch (UnknownHostException e) {
+            // This would be unusual but ignore it in this case.
+        }
+        if (result == null) {
+            // Fallback to default IPv4 loopback address.
+            // Not perfect but good enough and if the address is not valid the
+            // bind will fail later with an appropriate error message
+            try {
+                result = InetAddress.getByName("127.0.0.1");
+            } catch (UnknownHostException e) {
+                // Unreachable.
+                // For text representations of IP addresses only the format is
+                // checked.
+            }
+        }
+
+        return result;
+    }
+
+
     // Java 6 implementation of Java 8 methods
 
     public static boolean isJre8Available() {
@@ -344,5 +373,34 @@ public class JreCompat {
             }
         }
         return false;
+    }
+
+
+    /**
+     * Is the accessibleObject accessible (as a result of appropriate module
+     * exports) on the provided instance?
+     *
+     * @param base  The specific instance to be tested.
+     * @param accessibleObject  The method/field/constructor to be tested.
+     *
+     * @return {code true} if the AccessibleObject can be accessed otherwise
+     *         {code false}
+     */
+    public boolean canAcccess(Object base, AccessibleObject accessibleObject) {
+        // Java 8 doesn't support modules so default to true
+        return true;
+    }
+
+
+    /**
+     * Is the given class in an exported package?
+     *
+     * @param type  The class to test
+     *
+     * @return Always {@code true} for Java 8. {@code true} if the enclosing
+     *         package is exported for Java 9+
+     */
+    public boolean isExported(Class<?> type) {
+        return true;
     }
 }

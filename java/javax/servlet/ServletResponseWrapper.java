@@ -25,8 +25,7 @@ import java.util.Locale;
  * can be subclassed by developers wishing to adapt the response from a Servlet.
  * This class implements the Wrapper or Decorator pattern. Methods default to
  * calling through to the wrapped response object.
- * 
- * @author Various
+ *
  * @since v 2.3
  * @see javax.servlet.ServletResponse
  */
@@ -35,7 +34,9 @@ public class ServletResponseWrapper implements ServletResponse {
 
     /**
      * Creates a ServletResponse adaptor wrapping the given response object.
-     * 
+     *
+     * @param response The response to wrap
+     *
      * @throws java.lang.IllegalArgumentException
      *             if the response is null.
      */
@@ -48,6 +49,8 @@ public class ServletResponseWrapper implements ServletResponse {
 
     /**
      * Return the wrapped ServletResponse object.
+     *
+     * @return The wrapped ServletResponse object.
      */
     public ServletResponse getResponse() {
         return this.response;
@@ -55,7 +58,9 @@ public class ServletResponseWrapper implements ServletResponse {
 
     /**
      * Sets the response being wrapped.
-     * 
+     *
+     * @param response The new response to wrap
+     *
      * @throws java.lang.IllegalArgumentException
      *             if the response is null.
      */
@@ -69,7 +74,7 @@ public class ServletResponseWrapper implements ServletResponse {
     /**
      * The default behavior of this method is to call
      * setCharacterEncoding(String charset) on the wrapped response object.
-     * 
+     *
      * @since 2.4
      */
     @Override
@@ -125,7 +130,7 @@ public class ServletResponseWrapper implements ServletResponse {
     /**
      * The default behavior of this method is to return getContentType() on the
      * wrapped response object.
-     * 
+     *
      * @since 2.4
      */
     @Override
@@ -206,8 +211,12 @@ public class ServletResponseWrapper implements ServletResponse {
     }
 
     /**
-     * @param wrapped
-     * @since Servlet 3.0 TODO SERVLET3 - Add comments
+     * TODO SERVLET3 - Add comments
+     * @param wrapped The response to compare to the wrapped response
+     * @return <code>true</code> if the response wrapped by this wrapper (or
+     *         series of wrappers) is the same as the supplied response,
+     *         otherwise <code>false</code>
+     * @since Servlet 3.0
      */
     public boolean isWrapperFor(ServletResponse wrapped) {
         if (response == wrapped) {
@@ -220,8 +229,13 @@ public class ServletResponseWrapper implements ServletResponse {
     }
 
     /**
-     * @param wrappedType
-     * @since Servlet 3.0 TODO SERVLET3 - Add comments
+     * TODO SERVLET3 - Add comments
+     * @param wrappedType The class to compare to the class of the wrapped
+     *                    response
+     * @return <code>true</code> if the response wrapped by this wrapper (or
+     *         series of wrappers) is the same type as the supplied type,
+     *         otherwise <code>false</code>
+     * @since Servlet 3.0
      */
     @SuppressWarnings("unchecked")
     // Spec API does not use generics

@@ -85,7 +85,7 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
 
     public int getSendfileSize() { return ((AprEndpoint)endpoint).getSendfileSize(); }
     public void setSendfileSize(int sendfileSize) { ((AprEndpoint)endpoint).setSendfileSize(sendfileSize); }
-    
+
     public void setSendfileThreadCount(int sendfileThreadCount) { ((AprEndpoint)endpoint).setSendfileThreadCount(sendfileThreadCount); }
     public int getSendfileThreadCount() { return ((AprEndpoint)endpoint).getSendfileThreadCount(); }
 
@@ -188,7 +188,7 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
      */
     public int getSSLVerifyDepth() { return ((AprEndpoint)endpoint).getSSLVerifyDepth(); }
     public void setSSLVerifyDepth(int SSLVerifyDepth) { ((AprEndpoint)endpoint).setSSLVerifyDepth(SSLVerifyDepth); }
-    
+
     /**
      * Disable SSL compression.
      */
@@ -207,9 +207,9 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
 
     protected static class Http11ConnectionHandler
             extends AbstractConnectionHandler<Long,Http11AprProcessor> implements Handler {
-        
+
         protected Http11AprProtocol proto;
-        
+
         Http11ConnectionHandler(Http11AprProtocol proto) {
             this.proto = proto;
         }
@@ -223,7 +223,7 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
         protected Log getLog() {
             return log;
         }
-        
+
         @Override
         public void recycle() {
             recycledProcessors.clear();
@@ -232,7 +232,7 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
         /**
          * Expected to be used by the handler once the processor is no longer
          * required.
-         * 
+         *
          * @param socket
          * @param processor
          * @param isSocketClosing   Not used in HTTP
@@ -299,7 +299,7 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
         @Override
         protected Http11AprProcessor createProcessor() {
             Http11AprProcessor processor = new Http11AprProcessor(
-                    proto.getMaxHttpHeaderSize(), proto.getRejectIllegalHeaderName(),
+                    proto.getMaxHttpHeaderSize(), proto.getRejectIllegalHeader(),
                     (AprEndpoint)proto.endpoint, proto.getMaxTrailerSize(),
                     proto.getAllowedTrailerHeadersAsSet(), proto.getMaxExtensionSize(),
                     proto.getMaxSwallowSize(), proto.getRelaxedPathChars(),
@@ -307,10 +307,10 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
             processor.setAdapter(proto.adapter);
             processor.setMaxKeepAliveRequests(proto.getMaxKeepAliveRequests());
             processor.setKeepAliveTimeout(proto.getKeepAliveTimeout());
-            processor.setConnectionUploadTimeout(
-                    proto.getConnectionUploadTimeout());
+            processor.setConnectionUploadTimeout(proto.getConnectionUploadTimeout());
             processor.setDisableUploadTimeout(proto.getDisableUploadTimeout());
             processor.setCompressionMinSize(proto.getCompressionMinSize());
+            processor.setNoCompressionStrongETag(proto.getNoCompressionStrongETag());
             processor.setCompression(proto.getCompression());
             processor.setNoCompressionUserAgents(proto.getNoCompressionUserAgents());
             processor.setCompressableMimeTypes(proto.getCompressableMimeTypes());
@@ -336,7 +336,7 @@ public class Http11AprProtocol extends AbstractHttp11Protocol<Long> {
             return new org.apache.coyote.http11.upgrade.UpgradeAprProcessor(
                     socket, inbound);
         }
-        
+
         @Override
         protected Processor<Long> createUpgradeProcessor(
                 SocketWrapper<Long> socket,

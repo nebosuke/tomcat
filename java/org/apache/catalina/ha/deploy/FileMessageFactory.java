@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,15 +41,13 @@ import org.apache.tomcat.util.res.StringManager;
  * that. <BR>
  * To force a cleanup, call cleanup() from the calling object. <BR>
  * This class is not thread safe.
- * 
- * @author Filip Hanik
+ *
  * @version 1.0
  */
 public class FileMessageFactory {
     /*--Static Variables----------------------------------------*/
     private static final Log log = LogFactory.getLog(FileMessageFactory.class);
-    private static final StringManager sm =
-        StringManager.getManager(Constants.Package);
+    private static final StringManager sm = StringManager.getManager(FileMessageFactory.class);
 
     /**
      * The number of bytes that we read from file
@@ -68,7 +66,7 @@ public class FileMessageFactory {
     protected boolean openForWrite;
 
     /**
-     * Once the factory is used, it can not be reused.
+     * Once the factory is used, it cannot be reused.
      */
     protected boolean closed = false;
 
@@ -96,19 +94,18 @@ public class FileMessageFactory {
      * The total number of packets that we split this file into
      */
     protected long totalNrOfMessages = 0;
-    
+
     /**
      * The number of the last message processed. Message IDs are 1 based.
      */
     protected AtomicLong lastMessageProcessed = new AtomicLong(0);
-    
+
     /**
      * Messages received out of order are held in the buffer until required. If
      * everything is worked as expected, messages will spend very little time in
      * the buffer.
      */
-    protected Map<Long, FileMessage> msgBuffer =
-        new ConcurrentHashMap<Long, FileMessage>();
+    protected Map<Long, FileMessage> msgBuffer = new ConcurrentHashMap<Long, FileMessage>();
 
     /**
      * The bytes that we hold the data in, not thread safe.
@@ -137,7 +134,7 @@ public class FileMessageFactory {
      * output stream is opened to write to it. <BR>
      * When openForWrite==false, an input stream is opened, the file has to
      * exist.
-     * 
+     *
      * @param f
      *            File - the file to be read/written
      * @param openForWrite
@@ -173,7 +170,7 @@ public class FileMessageFactory {
      * Creates a factory to read or write from a file. When opening for read,
      * the readMessage can be invoked, and when opening for write the
      * writeMessage can be invoked.
-     * 
+     *
      * @param f
      *            File - the file to be read or written
      * @param openForWrite
@@ -198,7 +195,7 @@ public class FileMessageFactory {
      * more memory is ever used. To remember, neither the file message or the
      * factory are thread safe. dont hand off the message to one thread and read
      * the same with another.
-     * 
+     *
      * @param f
      *            FileMessage - the message to be populated with file data
      * @throws IllegalArgumentException -
@@ -227,7 +224,7 @@ public class FileMessageFactory {
     /**
      * Writes a message to file. If (msg.getMessageNumber() ==
      * msg.getTotalNrOfMsgs()) the output stream will be closed after writing.
-     * 
+     *
      * @param msg
      *            FileMessage - message containing data to be written
      * @throws IllegalArgumentException -
@@ -239,39 +236,29 @@ public class FileMessageFactory {
      */
     public boolean writeMessage(FileMessage msg)
             throws IllegalArgumentException, IOException {
-        if (!openForWrite)
-            throw new IllegalArgumentException(
-                    "Can't write message, this factory is reading.");
+        if (!openForWrite) {
+            throw new IllegalArgumentException(sm.getString("fileMessageFactory.cannotWrite"));
+        }
         if (log.isDebugEnabled())
             log.debug("Message " + msg + " data " + HexUtils.toHexString(msg.getData())
                     + " data length " + msg.getDataLength() + " out " + out);
-        
+
         if (msg.getMessageNumber() <= lastMessageProcessed.get()) {
             // Duplicate of message already processed
-            log.warn("Receive Message again -- Sender ActTimeout too short [ name: "
-                    + msg.getContextName()
-                    + " war: "
-                    + msg.getFileName()
-                    + " data: "
-                    + HexUtils.toHexString(msg.getData())
-                    + " data length: " + msg.getDataLength() + " ]");
+            log.warn(sm.getString("fileMessageFactory.duplicateMessage", msg.getContextName(), msg.getFileName(),
+                    HexUtils.toHexString(msg.getData()), Integer.valueOf(msg.getDataLength())));
             return false;
         }
-        
+
         FileMessage previous =
             msgBuffer.put(Long.valueOf(msg.getMessageNumber()), msg);
-        if (previous !=null) {
+        if (previous != null) {
             // Duplicate of message not yet processed
-            log.warn("Receive Message again -- Sender ActTimeout too short [ name: "
-                    + msg.getContextName()
-                    + " war: "
-                    + msg.getFileName()
-                    + " data: "
-                    + HexUtils.toHexString(msg.getData())
-                    + " data length: " + msg.getDataLength() + " ]");
+            log.warn(sm.getString("fileMessageFactory.duplicateMessage", msg.getContextName(), msg.getFileName(),
+                    HexUtils.toHexString(msg.getData()), Integer.valueOf(msg.getDataLength())));
             return false;
         }
-        
+
         FileMessage next = null;
         synchronized (this) {
             if (!isWriting) {
@@ -285,7 +272,7 @@ public class FileMessageFactory {
                 return false;
             }
         }
-        
+
         while (next != null) {
             out.write(next.getData(), 0, next.getDataLength());
             lastMessageProcessed.incrementAndGet();
@@ -303,7 +290,7 @@ public class FileMessageFactory {
                 }
             }
         }
-        
+
         return false;
     }//writeMessage
 
@@ -336,42 +323,37 @@ public class FileMessageFactory {
      * Check to make sure the factory is able to perform the function it is
      * asked to do. Invoked by readMessage/writeMessage before those methods
      * proceed.
-     * 
-     * @param openForWrite
-     *            boolean
-     * @throws IllegalArgumentException
+     *
+     * @param openForWrite The value to check
+     * @throws IllegalArgumentException if the state is not the expected one
      */
     protected void checkState(boolean openForWrite)
             throws IllegalArgumentException {
         if (this.openForWrite != openForWrite) {
             cleanup();
-            if (openForWrite)
-                throw new IllegalArgumentException(
-                        "Can't write message, this factory is reading.");
-            else
-                throw new IllegalArgumentException(
-                        "Can't read message, this factory is writing.");
+            if (openForWrite) {
+                throw new IllegalArgumentException(sm.getString("fileMessageFactory.cannotWrite"));
+            } else {
+                throw new IllegalArgumentException(sm.getString("fileMessageFactory.cannotRead"));
+            }
         }
         if (this.closed) {
             cleanup();
-            throw new IllegalArgumentException("Factory has been closed.");
+            throw new IllegalArgumentException(sm.getString("fileMessageFactory.closed"));
         }
     }
 
     /**
      * Example usage.
-     * 
+     *
      * @param args
      *            String[], args[0] - read from filename, args[1] write to
      *            filename
-     * @throws Exception
+     * @throws Exception An error occurred
      */
     public static void main(String[] args) throws Exception {
-
-        System.out
-                .println("Usage: FileMessageFactory fileToBeRead fileToBeWritten");
-        System.out
-                .println("Usage: This will make a copy of the file on the local file system");
+        System.out.println("Usage: FileMessageFactory fileToBeRead fileToBeWritten");
+        System.out.println("Usage: This will make a copy of the file on the local file system");
         FileMessageFactory read = getInstance(new File(args[0]), false);
         FileMessageFactory write = getInstance(new File(args[1]), true);
         FileMessage msg = new FileMessage(null, args[0], args[0]);
@@ -401,7 +383,9 @@ public class FileMessageFactory {
             int timeIdle = (int) ((timeNow - creationTime) / 1000L);
             if (timeIdle > maxValidTime) {
                 cleanup();
-                if (file.exists()) file.delete();
+                if (file.exists() && !file.delete()) {
+                    log.warn(sm.getString("fileMessageFactory.deleteFail", file));
+                }
                 return false;
             }
         }

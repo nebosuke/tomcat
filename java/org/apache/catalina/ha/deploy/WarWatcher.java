@@ -5,16 +5,15 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.catalina.ha.deploy;
 
 import java.io.File;
@@ -27,23 +26,19 @@ import org.apache.juli.logging.LogFactory;
 import org.apache.tomcat.util.res.StringManager;
 
 /**
- * <p>
  * The <b>WarWatcher </b> watches the deployDir for changes made to the
- * directory (adding new WAR files->deploy or remove WAR files->undeploy) And
- * notifies a listener of the changes made
- * </p>
- * 
+ * directory (adding new WAR files-&gt;deploy or remove WAR files-&gt;undeploy)
+ * and notifies a listener of the changes made.
+ *
  * @author Filip Hanik
  * @author Peter Rossbach
  * @version 1.1
  */
-
 public class WarWatcher {
 
     /*--Static Variables----------------------------------------*/
     private static final Log log = LogFactory.getLog(WarWatcher.class);
-    private static final StringManager sm =
-            StringManager.getManager(Constants.Package);
+    private static final StringManager sm = StringManager.getManager(WarWatcher.class);
 
     /*--Instance Variables--------------------------------------*/
     /**
@@ -122,7 +117,7 @@ public class WarWatcher {
 
     /**
      * add cluster war to the watcher state
-     * @param warfile
+     * @param warfile The WAR to add
      */
     protected void addWarInfo(File warfile) {
         WarInfo info = currentStatus.get(warfile.getAbsolutePath());
@@ -212,7 +207,7 @@ public class WarWatcher {
         /**
          * Returns 1 if the file has been added/modified, 0 if the file is
          * unchanged and -1 if the file has been removed
-         * 
+         *
          * @return int 1=file added; 0=unchanged; -1=file removed
          */
         public int check() {
