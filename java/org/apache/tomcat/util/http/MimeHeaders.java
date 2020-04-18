@@ -123,7 +123,7 @@ public class MimeHeaders {
      * Set limit on the number of header fields.
      * @param limit The new limit
      */
-    public void setLimit(int limit) {
+    public synchronized void setLimit(int limit) {
         this.limit = limit;
         if (limit > 0 && headers.length > limit && count < limit) {
             // shrink header list array
@@ -137,14 +137,14 @@ public class MimeHeaders {
      * Clears all header fields.
      */
     // [seguin] added for consistency -- most other objects have recycle().
-    public void recycle() {
+    public synchronized void recycle() {
         clear();
     }
 
     /**
      * Clears all header fields.
      */
-    public void clear() {
+    public synchronized void clear() {
         for (int i = 0; i < count; i++) {
             headers[i].recycle();
         }
@@ -177,7 +177,7 @@ public class MimeHeaders {
     /**
      * @return the current number of header fields.
      */
-    public int size() {
+    public synchronized int size() {
         return count;
     }
 
@@ -186,7 +186,7 @@ public class MimeHeaders {
      * @return the Nth header name, or null if there is no such header.
      * This may be used to iterate through all header fields.
      */
-    public MessageBytes getName(int n) {
+    public synchronized MessageBytes getName(int n) {
         return n >= 0 && n < count ? headers[n].getName() : null;
     }
 
@@ -195,7 +195,7 @@ public class MimeHeaders {
      * @return the Nth header value, or null if there is no such header.
      * This may be used to iterate through all header fields.
      */
-    public MessageBytes getValue(int n) {
+    public synchronized MessageBytes getValue(int n) {
         return n >= 0 && n < count ? headers[n].getValue() : null;
     }
 
@@ -205,7 +205,7 @@ public class MimeHeaders {
      * @param starting Index on which to start looking
      * @return the header index
      */
-    public int findHeader( String name, int starting ) {
+    public synchronized int findHeader( String name, int starting ) {
         // We can use a hash - but it's not clear how much
         // benefit you can get - there is an  overhead
         // and the number of headers is small (4-5 ?)
@@ -229,11 +229,11 @@ public class MimeHeaders {
      * that multiple fields with that name exist in this header.
      * @return the enumeration
      */
-    public Enumeration<String> names() {
+    public synchronized Enumeration<String> names() {
         return new NamesEnumerator(this);
     }
 
-    public Enumeration<String> values(String name) {
+    public synchronized Enumeration<String> values(String name) {
         return new ValuesEnumerator(this, name);
     }
 
@@ -274,7 +274,7 @@ public class MimeHeaders {
      * @param name The header name
      * @return the message bytes container for the value
      */
-    public MessageBytes addValue( String name ) {
+    public synchronized MessageBytes addValue( String name ) {
         MimeHeaderField mh = createHeader();
         mh.getName().setString(name);
         return mh.getValue();
@@ -289,7 +289,7 @@ public class MimeHeaders {
      * @param len Length
      * @return the message bytes container for the value
      */
-    public MessageBytes addValue(byte b[], int startN, int len) {
+    public synchronized MessageBytes addValue(byte b[], int startN, int len) {
         MimeHeaderField mhf=createHeader();
         mhf.getName().setBytes(b, startN, len);
         return mhf.getValue();
@@ -297,7 +297,7 @@ public class MimeHeaders {
 
     /** Create a new named header using translated char[].
      */
-    public MessageBytes addValue(char c[], int startN, int len)
+    public synchronized MessageBytes addValue(char c[], int startN, int len)
     {
         MimeHeaderField mhf=createHeader();
         mhf.getName().setChars(c, startN, len);
@@ -310,7 +310,7 @@ public class MimeHeaders {
      * @param name The header name
      * @return the message bytes container for the value
      */
-    public MessageBytes setValue( String name ) {
+    public synchronized MessageBytes setValue( String name ) {
         for ( int i = 0; i < count; i++ ) {
             if(headers[i].getName().equalsIgnoreCase(name)) {
                 for ( int j=i+1; j < count; j++ ) {
@@ -334,7 +334,7 @@ public class MimeHeaders {
      * @param name The header name
      * @return the value
      */
-    public MessageBytes getValue(String name) {
+    public synchronized MessageBytes getValue(String name) {
         for (int i = 0; i < count; i++) {
             if (headers[i].getName().equalsIgnoreCase(name)) {
                 return headers[i].getValue();
@@ -351,7 +351,7 @@ public class MimeHeaders {
      * @return the value if unique
      * @throws IllegalArgumentException if the header has multiple values
      */
-    public MessageBytes getUniqueValue(String name) {
+    public synchronized MessageBytes getUniqueValue(String name) {
         MessageBytes result = null;
         for (int i = 0; i < count; i++) {
             if (headers[i].getName().equalsIgnoreCase(name)) {
@@ -367,7 +367,7 @@ public class MimeHeaders {
 
     // bad shortcut - it'll convert to string ( too early probably,
     // encoding is guessed very late )
-    public String getHeader(String name) {
+    public synchronized String getHeader(String name) {
         MessageBytes mh = getValue(name);
         return mh != null ? mh.toString() : null;
     }
@@ -378,7 +378,7 @@ public class MimeHeaders {
      * if such a field could not be found.
      * @param name the name of the header field to be removed
      */
-    public void removeHeader(String name) {
+    public synchronized void removeHeader(String name) {
         // XXX
         // warning: rather sticky code; heavily tuned
 
@@ -393,7 +393,7 @@ public class MimeHeaders {
      * reset and swap with last header
      * @param idx the index of the header to remove.
      */
-    public void removeHeader(int idx) {
+    public synchronized void removeHeader(int idx) {
         MimeHeaderField mh = headers[idx];
 
         mh.recycle();

@@ -79,7 +79,7 @@ public final class Cookies {
     /**
      * Recycle.
      */
-    public void recycle() {
+    public synchronized void recycle() {
             for( int i=0; i< cookieCount; i++ ) {
             if( scookies[i]!=null ) {
                 scookies[i].recycle();
@@ -106,14 +106,14 @@ public final class Cookies {
 
     // -------------------- Indexed access --------------------
 
-    public ServerCookie getCookie( int idx ) {
+    public synchronized ServerCookie getCookie( int idx ) {
         if( unprocessed ) {
             getCookieCount(); // will also update the cookies
         }
         return scookies[idx];
     }
 
-    public int getCookieCount() {
+    public synchronized int getCookieCount() {
         if( unprocessed ) {
             unprocessed=false;
             processCookies(headers);
@@ -127,7 +127,7 @@ public final class Cookies {
      *  most of the time an existing ServerCookie object is returned.
      *  The caller can set the name/value and attributes for the cookie
      */
-    private ServerCookie addCookie() {
+    private synchronized ServerCookie addCookie() {
         if (limit > -1 && cookieCount >= limit) {
             throw new IllegalArgumentException(
                     sm.getString("cookies.maxCountFail", Integer.valueOf(limit)));
@@ -154,7 +154,7 @@ public final class Cookies {
 
     /** Add all Cookie found in the headers of a request.
      */
-    public  void processCookies( MimeHeaders headers ) {
+    public synchronized void processCookies( MimeHeaders headers ) {
         if( headers==null ) {
             return;// nothing to process
         }

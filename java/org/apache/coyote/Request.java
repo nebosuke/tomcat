@@ -496,7 +496,7 @@ public final class Request {
     // -------------------- Recycling --------------------
 
 
-    public void recycle() {
+    public synchronized void recycle() {
         bytesRead=0;
 
         contentLength = -1;
