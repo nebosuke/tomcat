@@ -48,12 +48,12 @@ import org.apache.tomcat.util.scan.JarFactory;
  * for the web application.
  *
  * Tag Libraries can be defined globally in one of two ways:
- *   1. Via <taglib> elements in web.xml:
+ *   1. Via &lt;taglib&gt; elements in web.xml:
  *      the uri and location of the tag-library are specified in
- *      the <taglib> element.
+ *      the &lt;taglib&gt; element.
  *   2. Via packaged jar files that contain .tld files
  *      within the META-INF directory, or some subdirectory
- *      of it. The taglib is 'global' if it has the <uri>
+ *      of it. The taglib is 'global' if it has the &lt;uri&gt;
  *      element defined.
  *
  * A mapping between the taglib URI and its associated TaglibraryInfoImpl
@@ -173,6 +173,10 @@ public class TldLocationsCache {
     /**
      * Obtains the TLD location cache for the given {@link ServletContext} and
      * creates one if one does not currently exist.
+     *
+     * @param ctxt The Servlet context for which the cache is required.
+     *
+     * @return The TLD location cache for the provided Servlet context
      */
     public static synchronized TldLocationsCache getInstance(
             ServletContext ctxt) {
@@ -202,6 +206,8 @@ public class TldLocationsCache {
      * second element denotes the name of the TLD entry in the jar file.
      * Returns null if the uri is not associated with any tag library 'exposed'
      * in the web application.
+     *
+     * @throws JasperException if initialisation of the cache fails
      */
     public TldLocation getLocation(String uri) throws JasperException {
         if (!initialized) {
@@ -215,6 +221,10 @@ public class TldLocationsCache {
      *     ABS_URI
      *     ROOT_REL_URI
      *     NOROOT_REL_URI
+     *
+     * @param uri   The URI for which the type is required
+     *
+     * @return The type as an int constant
      */
     public static int uriType(String uri) {
         if (uri.indexOf(':') != -1) {

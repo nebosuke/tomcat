@@ -55,6 +55,7 @@ import org.apache.naming.resources.DirContextURLStreamHandler;
 import org.apache.naming.resources.DirContextURLStreamHandlerFactory;
 import org.apache.naming.resources.Resource;
 import org.apache.tomcat.util.ExceptionUtils;
+import org.apache.tomcat.util.buf.B2CConverter;
 import org.apache.tomcat.util.buf.UDecoder;
 import org.apache.tomcat.util.compat.JreCompat;
 import org.apache.tomcat.util.modeler.Registry;
@@ -85,8 +86,8 @@ public class WebappLoader extends LifecycleMBeanBase
 
 
     /**
-     * Construct a new WebappLoader with no defined parent class loader
-     * (so that the actual parent will be the system class loader).
+     * Construct a new WebappLoader. The parent class loader will be defined by
+     * {@link Context#getParentClassLoader()}.
      */
     public WebappLoader() {
 
@@ -100,7 +101,12 @@ public class WebappLoader extends LifecycleMBeanBase
      * to be defined as the parent of the ClassLoader we ultimately create.
      *
      * @param parent The parent class loader
+     *
+     * @deprecated Use {@link Context#setParentClassLoader(ClassLoader)} to
+     *             specify the required class loader. This method will be
+     *             removed in Tomcat 10 onwards.
      */
+    @Deprecated
     public WebappLoader(ClassLoader parent) {
         super();
         this.parentClassLoader = parent;
@@ -746,6 +752,8 @@ public class WebappLoader extends LifecycleMBeanBase
 
         if (parentClassLoader == null) {
             parentClassLoader = container.getParentClassLoader();
+        } else {
+            container.setParentClassLoader(parentClassLoader);
         }
         Class<?>[] argTypes = { ClassLoader.class };
         Object[] args = { parentClassLoader };
@@ -1100,12 +1108,11 @@ public class WebappLoader extends LifecycleMBeanBase
                 for (int i = 0; i < repositories.length; i++) {
                     String repository = repositories[i].toString();
                     if (repository.startsWith("file://"))
-                        repository = UDecoder.URLDecode(repository.substring(7));
+                        repository = UDecoder.URLDecode(repository.substring(7), B2CConverter.ISO_8859_1);
                     else if (repository.startsWith("file:"))
-                        repository = UDecoder.URLDecode(repository.substring(5));
+                        repository = UDecoder.URLDecode(repository.substring(5), B2CConverter.ISO_8859_1);
                     else if (repository.startsWith("jndi:"))
-                        repository =
-                            servletContext.getRealPath(repository.substring(5));
+                        repository = servletContext.getRealPath(repository.substring(5));
                     else
                         continue;
                     if (repository == null)

@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,12 +26,15 @@ import java.util.List;
 import javax.management.ObjectName;
 
 import org.apache.catalina.Container;
+import org.apache.catalina.GSSRealm;
 import org.apache.catalina.Lifecycle;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.Realm;
+import org.apache.catalina.Wrapper;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSName;
 
@@ -61,9 +64,9 @@ public class CombinedRealm extends RealmBase {
      */
     public void addRealm(Realm theRealm) {
         realms.add(theRealm);
-        
+
         if (log.isDebugEnabled()) {
-            sm.getString("combinedRealm.addRealm", theRealm.getInfo(), 
+            sm.getString("combinedRealm.addRealm", theRealm.getInfo(),
                     Integer.toString(realms.size()));
         }
     }
@@ -102,7 +105,7 @@ public class CombinedRealm extends RealmBase {
             String nonce, String nc, String cnonce, String qop,
             String realmName, String md5a2) {
         Principal authenticatedUser = null;
-        
+
         for (Realm realm : realms) {
             if (log.isDebugEnabled()) {
                 log.debug(sm.getString("combinedRealm.authStart", username, realm.getInfo()));
@@ -172,7 +175,7 @@ public class CombinedRealm extends RealmBase {
     @Override
     public Principal authenticate(String username, String credentials) {
         Principal authenticatedUser = null;
-        
+
         for (Realm realm : realms) {
             if (log.isDebugEnabled()) {
                 log.debug(sm.getString("combinedRealm.authStart", username, realm.getInfo()));
@@ -208,7 +211,7 @@ public class CombinedRealm extends RealmBase {
                 ((RealmBase) realm).setRealmPath(
                         getRealmPath() + "/realm" + realms.indexOf(realm));
             }
-            
+
             // Set the container for sub-realms. Mainly so logging works.
             realm.setContainer(container);
         }
@@ -228,7 +231,7 @@ public class CombinedRealm extends RealmBase {
     protected void startInternal() throws LifecycleException {
         // Start 'sub-realms' then this one
         Iterator<Realm> iter = realms.iterator();
-        
+
         while (iter.hasNext()) {
             Realm realm = iter.next();
             if (realm instanceof Lifecycle) {
@@ -262,7 +265,7 @@ public class CombinedRealm extends RealmBase {
             if (realm instanceof Lifecycle) {
                 ((Lifecycle) realm).stop();
             }
-        }        
+        }
     }
 
 
@@ -305,7 +308,7 @@ public class CombinedRealm extends RealmBase {
         if (certs != null && certs.length >0) {
             username = certs[0].getSubjectDN().getName();
         }
-        
+
         for (Realm realm : realms) {
             if (log.isDebugEnabled()) {
                 log.debug(sm.getString("combinedRealm.authStart", username, realm.getInfo()));
@@ -331,49 +334,98 @@ public class CombinedRealm extends RealmBase {
      * {@inheritDoc}
      */
     @Override
-    public Principal authenticate(GSSContext gssContext, boolean storeCreds) {
+    public Principal authenticate(GSSContext gssContext, boolean storeCred) {
         if (gssContext.isEstablished()) {
             Principal authenticatedUser = null;
-            String username = null;
-            
-            GSSName name = null;
+            GSSName gssName = null;
             try {
-                name = gssContext.getSrcName();
+                gssName = gssContext.getSrcName();
             } catch (GSSException e) {
                 log.warn(sm.getString("realmBase.gssNameFail"), e);
                 return null;
             }
-            
-            username = name.toString();
 
             for (Realm realm : realms) {
                 if (log.isDebugEnabled()) {
                     log.debug(sm.getString("combinedRealm.authStart",
-                            username, realm.getInfo()));
+                            gssName, realm.getInfo()));
                 }
 
-                authenticatedUser = realm.authenticate(gssContext, storeCreds);
+                authenticatedUser = realm.authenticate(gssContext, storeCred);
 
                 if (authenticatedUser == null) {
                     if (log.isDebugEnabled()) {
                         log.debug(sm.getString("combinedRealm.authFail",
-                                username, realm.getInfo()));
+                                gssName, realm.getInfo()));
                     }
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug(sm.getString("combinedRealm.authSuccess",
-                                username, realm.getInfo()));
+                                gssName, realm.getInfo()));
                     }
                     break;
                 }
             }
             return authenticatedUser;
         }
-        
+
         // Fail in all other cases
         return null;
     }
-    
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Principal authenticate(GSSName gssName, GSSCredential gssCredential) {
+        Principal authenticatedUser = null;
+
+        for (Realm realm : realms) {
+            if (log.isDebugEnabled()) {
+                log.debug(sm.getString("combinedRealm.authStart",
+                        gssName, realm.getClass().getName()));
+            }
+
+            if (!(realm instanceof GSSRealm)) {
+                if (log.isDebugEnabled()) {
+                    log.debug(sm.getString("combinedRealm.authFail",
+                            gssName, realm.getClass().getName()));
+                }
+
+                continue;
+            }
+
+            authenticatedUser = ((GSSRealm) realm).authenticate(gssName, gssCredential);
+
+            if (authenticatedUser == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug(sm.getString("combinedRealm.authFail",
+                            gssName, realm.getClass().getName()));
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug(sm.getString("combinedRealm.authSuccess",
+                            gssName, realm.getClass().getName()));
+                }
+                break;
+            }
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean hasRole(Wrapper wrapper, Principal principal, String role) {
+        for (Realm realm : realms) {
+            if (realm.hasRole(wrapper, principal, role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     protected String getName() {
         return name;

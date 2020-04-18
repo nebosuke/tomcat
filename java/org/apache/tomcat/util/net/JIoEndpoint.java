@@ -559,6 +559,9 @@ public class JIoEndpoint extends AbstractEndpoint<Socket> {
     public void processSocketAsync(SocketWrapper<Socket> socket,
             SocketStatus status) {
         try {
+            // Sync is necessary to ensure that the original processing thread
+            // has placed the socket in waitingRequests before the dispatching
+            // thread tries to use it.
             synchronized (socket) {
                 if (waitingRequests.remove(socket)) {
                     SocketProcessor proc = new SocketProcessor(socket,status);

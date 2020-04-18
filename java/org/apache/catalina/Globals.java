@@ -274,8 +274,14 @@ public final class Globals {
 
 
     /**
-     *
+     * The request attribute that is set to the value of {@code Boolean.TRUE}
+     * by the RemoteIpFilter, RemoteIpValve (and other similar components) that identifies
+     * a request which been forwarded via one or more proxies.
      */
+    public static final String REQUEST_FORWARDED_ATTRIBUTE =
+        "org.apache.tomcat.request.forwarded";
+
+
     public static final String ASYNC_SUPPORTED_ATTR =
         "org.apache.catalina.ASYNC_SUPPORTED";
 
@@ -362,6 +368,15 @@ public final class Globals {
      */
     public static final String JASPER_XML_BLOCK_EXTERNAL_INIT_PARAM =
             "org.apache.jasper.XML_BLOCK_EXTERNAL";
+
+
+    /**
+     * Name of the ServletContext attribute under which we store the web
+     * application version string (the text that appears after ## when parallel
+     * deployment is used).
+     */
+    public static final String WEBAPP_VERSION = "org.apache.catalina.webappVersion";
+
 
     @Deprecated // Will be removed in Tomcat 9.0.x
     public static final boolean IS_ORACLE_JVM = JreVendor.IS_ORACLE_JVM;

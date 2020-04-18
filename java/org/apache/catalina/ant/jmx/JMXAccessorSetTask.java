@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,7 +29,7 @@ import org.apache.tools.ant.BuildException;
 
 
 /**
- * Access <em>JMX</em> JSR 160 MBeans Server. 
+ * Access <em>JMX</em> JSR 160 MBeans Server.
  * <ul>
  * <li>Get Mbeans attributes</li>
  * <li>Show Get result as Ant console log</li>
@@ -37,21 +37,21 @@ import org.apache.tools.ant.BuildException;
  * </ul>
  * <p>
  * Examples:
- * Set a Mbean Manager attribute maxActiveSessions.
- * Set this attribute with fresh jmx connection without save reference 
+ * Set an Mbean Manager attribute maxActiveSessions.
+ * Set this attribute with fresh jmx connection without save reference
+ * </p>
  * <pre>
  *   &lt;jmx:set
  *           host="127.0.0.1"
  *           port="9014"
  *           ref=""
- *           name="Catalina:type=Manager,context="/ClusterTest",host=localhost" 
+ *           name="Catalina:type=Manager,context="/ClusterTest",host=localhost"
  *           attribute="maxActiveSessions"
  *           value="100"
  *           type="int"
  *           echo="false"&gt;
  *       /&gt;
  * </pre>
- * </p>
  * <p>
  * First call to a remote MBeanserver save the JMXConnection a referenz <em>jmx.server</em>
  * </p>
@@ -68,7 +68,7 @@ public class JMXAccessorSetTask extends JMXAccessorTask {
     private String value;
     private String type;
     private boolean convert = false ;
-    
+
     // ----------------------------------------------------- Instance Info
 
     /**
@@ -89,21 +89,21 @@ public class JMXAccessorSetTask extends JMXAccessorTask {
     }
 
     // ------------------------------------------------------------- Properties
-    
+
     /**
      * @return Returns the attribute.
      */
     public String getAttribute() {
         return attribute;
     }
-    
+
     /**
      * @param attribute The attribute to set.
      */
     public void setAttribute(String attribute) {
         this.attribute = attribute;
     }
-    
+
     /**
      * @return Returns the value.
      */
@@ -116,23 +116,23 @@ public class JMXAccessorSetTask extends JMXAccessorTask {
     public void setValue(String value) {
         this.value = value;
     }
-    
-    
+
+
     /**
      * @return Returns the type.
      */
     public String getType() {
         return type;
     }
-    
+
     /**
      * @param valueType The type to set.
      */
     public void setType(String valueType) {
         this.type = valueType;
     }
- 
- 
+
+
     /**
      * @return Returns the convert.
      */
@@ -146,15 +146,7 @@ public class JMXAccessorSetTask extends JMXAccessorTask {
         this.convert = convert;
     }
     // ------------------------------------------------------ protected Methods
-    
-    /**
-     * Execute the specified command, based on the configured properties. The
-     * input stream will be closed upon completion of this task, whether it was
-     * executed successfully or not.
-     * 
-     * @exception Exception
-     *                if an error occurs
-     */
+
     @Override
     public String jmxExecute(MBeanServerConnection jmxServerConnection)
         throws Exception {
@@ -170,9 +162,12 @@ public class JMXAccessorSetTask extends JMXAccessorTask {
      }
 
     /**
-     * @param jmxServerConnection
-     * @param name
-     * @throws Exception
+     * Set property value.
+     *
+     * @param jmxServerConnection Connection to the JMX server
+     * @param name The MBean name
+     * @return null (no error message to report other than exception)
+     * @throws Exception An error occurred
      */
     protected String jmxSet(MBeanServerConnection jmxServerConnection,
             String name) throws Exception {
@@ -195,11 +190,12 @@ public class JMXAccessorSetTask extends JMXAccessorTask {
 
     /**
      * Get MBean Attribute from Mbean Server
-     * @param jmxServerConnection
-     * @param name
-     * @param attribute
-     * @return The type
-     * @throws Exception
+     *
+     * @param jmxServerConnection The JMX connection name
+     * @param name The MBean name
+     * @param attribute The attribute name
+     * @return The type of the attribute
+     * @throws Exception An error occurred
      */
     protected String getMBeanAttributeType(
             MBeanServerConnection jmxServerConnection,

@@ -19,6 +19,7 @@ package org.apache.catalina.core;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -98,7 +99,7 @@ public class TestStandardWrapper extends TomcatBaseTest {
         // Setup Tomcat instance
         Tomcat tomcat = getTomcatInstance();
 
-        File appDir = new File("test/webapp-3.0-fragments");
+        File appDir = new File("test/webapp-fragments");
         tomcat.addWebapp(null, "", appDir.getAbsolutePath());
 
         tomcat.start();
@@ -119,7 +120,7 @@ public class TestStandardWrapper extends TomcatBaseTest {
         // Setup Tomcat instance
         Tomcat tomcat = getTomcatInstance();
 
-        File appDir = new File("test/webapp-3.0");
+        File appDir = new File("test/webapp");
         tomcat.addWebapp(null, "", appDir.getAbsolutePath());
 
         tomcat.start();
@@ -149,7 +150,7 @@ public class TestStandardWrapper extends TomcatBaseTest {
         // Setup Tomcat instance
         Tomcat tomcat = getTomcatInstance();
 
-        File appDir = new File("test/webapp-3.0-servletsecurity");
+        File appDir = new File("test/webapp-servletsecurity");
         tomcat.addWebapp(null, "", appDir.getAbsolutePath());
 
         tomcat.start();
@@ -168,7 +169,7 @@ public class TestStandardWrapper extends TomcatBaseTest {
         // Setup Tomcat instance
         Tomcat tomcat = getTomcatInstance();
 
-        File appDir = new File("test/webapp-3.0-servletsecurity2");
+        File appDir = new File("test/webapp-servletsecurity2");
         tomcat.addWebapp(null, "", appDir.getAbsolutePath());
 
         tomcat.start();
@@ -188,6 +189,85 @@ public class TestStandardWrapper extends TomcatBaseTest {
 
         Assert.assertEquals(200, rc);
         Assert.assertTrue(bc.toString().contains("00-OK"));
+    }
+
+    @Test
+    public void testRoleMappingInEngine() throws Exception {
+        doTestRoleMapping("engine");
+    }
+
+    @Test
+    public void testRoleMappingInHost() throws Exception {
+        doTestRoleMapping("host");
+    }
+
+    @Test
+    public void testRoleMappingInContext() throws Exception {
+        doTestRoleMapping("context");
+    }
+
+    private void doTestRoleMapping(String realmContainer)
+            throws Exception {
+        // Setup Tomcat instance
+        Tomcat tomcat = getTomcatInstance();
+
+        // No file system docBase required
+        Context ctx = tomcat.addContext("", null);
+        ctx.addRoleMapping("testRole", "very-complex-role-name");
+
+        Wrapper wrapper = Tomcat.addServlet(ctx, "servlet", RoleAllowServlet.class.getName());
+        ctx.addServletMapping("/", "servlet");
+
+        ctx.setLoginConfig(new LoginConfig("BASIC", null, null, null));
+        ctx.getPipeline().addValve(new BasicAuthenticator());
+
+        MapRealm realm = new MapRealm();
+
+        /* Attach the realm to the appropriate container, but role mapping must
+         * always succeed because it is evaluated at context level.
+         */
+        if (realmContainer.equals("engine")) {
+            tomcat.getEngine().setRealm(realm);
+        } else if (realmContainer.equals("host")) {
+            tomcat.getHost().setRealm(realm);
+        } else if (realmContainer.equals("context")) {
+            ctx.setRealm(realm);
+        } else {
+            throw new IllegalArgumentException("realmContainer is invalid");
+        }
+
+        realm.addUser("testUser", "testPwd");
+        realm.addUserRole("testUser", "testRole1");
+        realm.addUserRole("testUser", "very-complex-role-name");
+        realm.addUserRole("testUser", "another-very-complex-role-name");
+
+        tomcat.start();
+
+        Principal p = realm.authenticate("testUser", "testPwd");
+
+        Assert.assertNotNull(p);
+        Assert.assertEquals("testUser", p.getName());
+        // This one is mapped
+        Assert.assertTrue(realm.hasRole(wrapper, p, "testRole"));
+        Assert.assertTrue(realm.hasRole(wrapper, p, "testRole1"));
+        Assert.assertFalse(realm.hasRole(wrapper, p, "testRole2"));
+        Assert.assertTrue(realm.hasRole(wrapper, p, "very-complex-role-name"));
+        Assert.assertTrue(realm.hasRole(wrapper, p, "another-very-complex-role-name"));
+
+        // This now tests RealmBase#hasResourcePermission() because we need a wrapper
+        // to be passed from an authenticator
+        ByteChunk bc = new ByteChunk();
+        Map<String, List<String>> reqHeaders = new HashMap<String, List<String>>();
+        List<String> authHeaders = new ArrayList<String>();
+        // testUser, testPwd
+        authHeaders.add("Basic dGVzdFVzZXI6dGVzdFB3ZA==");
+        reqHeaders.put("Authorization", authHeaders);
+
+        int rc = getUrl("http://localhost:" + getPort() + "/", bc, reqHeaders,
+                null);
+
+        Assert.assertEquals("OK", bc.toString());
+        Assert.assertEquals(200, rc);
     }
 
     private void doTestSecurityAnnotationsAddServlet(boolean useCreateServlet)

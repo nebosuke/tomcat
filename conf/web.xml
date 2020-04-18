@@ -620,6 +620,7 @@
   <!-- based on these mappings.  Additional mappings can be added here (to  -->
   <!-- apply to all web applications), or in your own application's web.xml -->
   <!-- deployment descriptor.                                               -->
+  <!-- Note: Extensions are always matched in a case-insensitive manner.    -->
 
     <mime-mapping>
         <extension>123</extension>
@@ -4633,10 +4634,6 @@
     </mime-mapping>
     <mime-mapping>
         <extension>z</extension>
-        <mime-type>application/x-compress</mime-type>
-    </mime-mapping>
-    <mime-mapping>
-        <extension>Z</extension>
         <mime-type>application/x-compress</mime-type>
     </mime-mapping>
     <mime-mapping>

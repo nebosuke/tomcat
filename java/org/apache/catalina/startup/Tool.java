@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,7 +56,7 @@ import org.apache.tomcat.util.ExceptionUtils;
  *         to corresponding to the value of <code>catalina.home</code>
  *         (useful when your command line tool runs Ant).</li>
  *     <li><em>-common</em> : Add <code>common/classes</code> and
- *         <code>common/lib</codE) to the class loader repositories.</li>
+ *         <code>common/lib</code> to the class loader repositories.</li>
  *     <li><em>-server</em> : Add <code>server/classes</code> and
  *         <code>server/lib</code> to the class loader repositories.</li>
  *     <li><em>-shared</em> : Add <code>shared/classes</code> and
@@ -74,7 +74,7 @@ public final class Tool {
 
 
     private static final Log log = LogFactory.getLog(Tool.class);
-    
+
     // ------------------------------------------------------- Static Variables
 
 

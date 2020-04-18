@@ -17,18 +17,22 @@
 logs
 nbproject
 output
-# Next line commented out, because test/webapp-3.0-virtual-library and
-# test/webapp-3.0-virtual-webapp use it:
+# Next line commented out, because test/webapp-virtual-library and
+# test/webapp-virtual-webapp use it:
 # target
 work
 build.properties
 mvn.properties
+.ant-targets-build.xml
 .checkstyle
 .classpath
 .fbprefs
 .project
 .settings
+.idea
 *.iml
+*.ipr
+*.iws
 *.asc
 *.jj
 *.tmp

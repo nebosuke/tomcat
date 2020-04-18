@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -55,13 +55,13 @@ import java.util.regex.Pattern;
  * named {prefix}{date}{suffix} in a configured directory.
  *
  * <p>The following configuration properties are available:</p>
- * 
+ *
  * <ul>
  *   <li><code>directory</code> - The directory where to create the log file.
  *    If the path is not absolute, it is relative to the current working
  *    directory of the application. The Apache Tomcat configuration files usually
  *    specify an absolute path for this property,
- *    <code>${catalina.base}/logs</code> 
+ *    <code>${catalina.base}/logs</code>
  *    Default value: <code>logs</code></li>
  *   <li><code>rotatable</code> - If <code>true</code>, the log file will be
  *    rotated on the first write past midnight and the filename will be
@@ -87,27 +87,32 @@ import java.util.regex.Pattern;
  *   <li><code>formatter</code> - The <code>java.util.logging.Formatter</code>
  *    implementation class name for this Handler. Default value:
  *    <code>java.util.logging.SimpleFormatter</code></li>
- *   <li><code>maxDays</code> - The maximum number of days to keep the log files.
- *    If the specified value is <code>&lt;=0</code> then the log files will be kept
- *    on the file system forever, otherwise they will be kept the specified maximum
- *    days. Default value: <code>-1</code>.</li>
+ *   <li><code>maxDays</code> - The maximum number of days to keep the log
+ *    files. If the specified value is <code>&lt;=0</code> then the log files
+ *    will be kept on the file system forever, otherwise they will be kept the
+ *    specified maximum days. Default value: <code>-1</code>.</li>
  * </ul>
  */
 public class FileHandler extends Handler {
+
     public static final int DEFAULT_MAX_DAYS = -1;
 
     private static final ExecutorService DELETE_FILES_SERVICE =
             Executors.newSingleThreadExecutor(new ThreadFactory() {
+                private static final String NAME_PREFIX = "FileHandlerLogFilesCleaner-";
                 private final boolean isSecurityEnabled;
                 private final ThreadGroup group;
                 private final AtomicInteger threadNumber = new AtomicInteger(1);
-                private final String namePrefix = "FileHandlerLogFilesCleaner-";
 
                 {
                     SecurityManager s = System.getSecurityManager();
-                    this.isSecurityEnabled = s != null;
-                    this.group = isSecurityEnabled ? s.getThreadGroup()
-                            : Thread.currentThread().getThreadGroup();
+                    if (s == null) {
+                        this.isSecurityEnabled = false;
+                        this.group = Thread.currentThread().getThreadGroup();
+                    } else {
+                        this.isSecurityEnabled = true;
+                        this.group = s.getThreadGroup();
+                    }
                 }
 
                 @Override
@@ -130,7 +135,7 @@ public class FileHandler extends Handler {
                                     .setContextClassLoader(getClass().getClassLoader());
                         }
                         Thread t = new Thread(group, r,
-                                namePrefix + threadNumber.getAndIncrement());
+                                NAME_PREFIX + threadNumber.getAndIncrement());
                         t.setDaemon(true);
                         return t;
                     } finally {
@@ -232,8 +237,8 @@ public class FileHandler extends Handler {
 
 
     /**
-     * Represents a file name pattern of type {prefix}{date}{suffix}. The date
-     * is YYYY-MM-DD
+     * Represents a file name pattern of type {prefix}{date}{suffix}.
+     * The date is YYYY-MM-DD
      */
     private Pattern pattern;
 
@@ -242,7 +247,7 @@ public class FileHandler extends Handler {
 
 
     /**
-     * Format and publish a <tt>LogRecord</tt>.
+     * Format and publish a <code>LogRecord</code>.
      *
      * @param  record  description of the log event
      */
@@ -300,7 +305,6 @@ public class FileHandler extends Handler {
                 }
             } catch (Exception e) {
                 reportError(null, e, ErrorManager.WRITE_FAILURE);
-                return;
             }
         } finally {
             writerLock.readLock().unlock();
@@ -366,8 +370,7 @@ public class FileHandler extends Handler {
     private void configure() {
 
         Timestamp ts = new Timestamp(System.currentTimeMillis());
-        String tsString = ts.toString().substring(0, 19);
-        date = tsString.substring(0, 10);
+        date = ts.toString().substring(0, 10);
 
         String className = this.getClass().getName(); //allow classes to override
 
@@ -411,6 +414,7 @@ public class FileHandler extends Handler {
         } catch (NumberFormatException ignore) {
             //no op
         }
+
         // Get encoding for the logging file
         String encoding = getProperty(className + ".encoding", null);
         if (encoding != null && encoding.length() > 0) {
@@ -428,7 +432,7 @@ public class FileHandler extends Handler {
         String filterName = getProperty(className + ".filter", null);
         if (filterName != null) {
             try {
-                setFilter((Filter) cl.loadClass(filterName).newInstance());
+                setFilter((Filter) cl.loadClass(filterName).getConstructor().newInstance());
             } catch (Exception e) {
                 // Ignore
             }
@@ -438,7 +442,8 @@ public class FileHandler extends Handler {
         String formatterName = getProperty(className + ".formatter", null);
         if (formatterName != null) {
             try {
-                setFormatter((Formatter) cl.loadClass(formatterName).newInstance());
+                setFormatter((Formatter) cl.loadClass(
+                        formatterName).getConstructor().newInstance());
             } catch (Exception e) {
                 // Ignore and fallback to defaults
                 setFormatter(new SimpleFormatter());
@@ -449,7 +454,6 @@ public class FileHandler extends Handler {
 
         // Set error manager
         setErrorManager(new ErrorManager());
-
     }
 
 

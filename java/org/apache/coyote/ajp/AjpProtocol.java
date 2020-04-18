@@ -22,6 +22,7 @@ import org.apache.coyote.AbstractProtocol;
 import org.apache.coyote.Processor;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.compat.JreCompat;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.JIoEndpoint;
 import org.apache.tomcat.util.net.JIoEndpoint.Handler;
@@ -38,8 +39,8 @@ import org.apache.tomcat.util.net.SocketWrapper;
  * @author Costin Manolache
  */
 public class AjpProtocol extends AbstractAjpProtocol<Socket> {
-    
-    
+
+
     private static final Log log = LogFactory.getLog(AjpProtocol.class);
 
     @Override
@@ -57,6 +58,7 @@ public class AjpProtocol extends AbstractAjpProtocol<Socket> {
 
     public AjpProtocol() {
         endpoint = new JIoEndpoint();
+        endpoint.setAddress(JreCompat.getInstance().getLoopbackAddress());
         cHandler = new AjpConnectionHandler(this);
         ((JIoEndpoint) endpoint).setHandler(cHandler);
         setSoLinger(Constants.DEFAULT_CONNECTION_LINGER);
@@ -64,10 +66,10 @@ public class AjpProtocol extends AbstractAjpProtocol<Socket> {
         setTcpNoDelay(Constants.DEFAULT_TCP_NO_DELAY);
     }
 
-    
+
     // ----------------------------------------------------- Instance Variables
 
-    
+
     /**
      * Connection handler for AJP.
      */
@@ -94,7 +96,7 @@ public class AjpProtocol extends AbstractAjpProtocol<Socket> {
         public AjpConnectionHandler(AjpProtocol proto) {
             this.proto = proto;
         }
-        
+
         @Override
         protected AbstractProtocol<Socket> getProtocol() {
             return proto;
@@ -114,10 +116,12 @@ public class AjpProtocol extends AbstractAjpProtocol<Socket> {
         /**
          * Expected to be used by the handler once the processor is no longer
          * required.
-         * 
+         *
          * @param socket            Ignored for BIO
-         * @param processor
-         * @param isSocketClosing
+         * @param processor         The process that was processing this
+         *                              connection and is no longer required
+         * @param isSocketClosing   Is the socket associated with this
+         *                              connection in the process of closing
          * @param addToPoller       Ignored for BIO
          */
         @Override
@@ -136,10 +140,11 @@ public class AjpProtocol extends AbstractAjpProtocol<Socket> {
             processor.setAjpFlush(proto.getAjpFlush());
             processor.setTomcatAuthentication(proto.tomcatAuthentication);
             processor.setTomcatAuthorization(proto.getTomcatAuthorization());
-            processor.setRequiredSecret(proto.requiredSecret);
+            processor.setSecret(proto.getSecret());
             processor.setKeepAliveTimeout(proto.getKeepAliveTimeout());
             processor.setClientCertProvider(proto.getClientCertProvider());
             processor.setMaxCookieCount(proto.getMaxCookieCount());
+            processor.setAllowedRequestAttributesPatternPattern(proto.getAllowedRequestAttributesPatternPattern());
             register(processor);
             return processor;
         }

@@ -41,7 +41,7 @@ public class NioBlockingSelector {
 
     private static final Log log = LogFactory.getLog(NioBlockingSelector.class);
 
-    private static int threadCounter = 0;
+    private static AtomicInteger threadCounter = new AtomicInteger(0);
 
     private Queue<KeyReference> keyReferenceQueue =
             new ConcurrentLinkedQueue<KeyReference>();
@@ -58,7 +58,7 @@ public class NioBlockingSelector {
         poller = new BlockPoller();
         poller.selector = sharedSelector;
         poller.setDaemon(true);
-        poller.setName("NioBlockingSelector.BlockPoller-"+(++threadCounter));
+        poller.setName("NioBlockingSelector.BlockPoller-"+(threadCounter.getAndIncrement()));
         poller.start();
     }
 
@@ -431,7 +431,7 @@ public class NioBlockingSelector {
                 try {key.cancel();}catch (Exception ignore){}
             }
             key = null;
-            
+
             super.finalize();
         }
     }

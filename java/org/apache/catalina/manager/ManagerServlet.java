@@ -5,19 +5,16 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.catalina.manager;
-
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -58,6 +55,7 @@ import org.apache.catalina.util.RequestUtil;
 import org.apache.catalina.util.ServerInfo;
 import org.apache.tomcat.util.Diagnostics;
 import org.apache.tomcat.util.ExceptionUtils;
+import org.apache.tomcat.util.IntrospectionUtils;
 import org.apache.tomcat.util.modeler.Registry;
 import org.apache.tomcat.util.res.StringManager;
 
@@ -79,12 +77,12 @@ import org.apache.tomcat.util.res.StringManager;
  *     file found at the specified URL.  The <code>docBase</code> attribute
  *     of the context configuration file is used to locate the actual
  *     WAR or directory containing the application.</li>
- * <li><b>/deploy?config={config-url}&war={war-url}/</b> - Install and start
+ * <li><b>/deploy?config={config-url}&amp;war={war-url}/</b> - Install and start
  *     a new web application, based on the contents of the context
  *     configuration file found at <code>{config-url}</code>, overriding the
  *     <code>docBase</code> attribute with the contents of the web
  *     application archive found at <code>{war-url}</code>.</li>
- * <li><b>/deploy?path=/xxx&war={war-url}</b> - Install and start a new
+ * <li><b>/deploy?path=/xxx&amp;war={war-url}</b> - Install and start a new
  *     web application attached to context path <code>/xxx</code>, based
  *     on the contents of the web application archive found at the
  *     specified URL.</li>
@@ -100,10 +98,10 @@ import org.apache.tomcat.util.res.StringManager;
  *     (fully qualified Java class name), if available.</li>
  * <li><b>/serverinfo</b> - Display system OS and JVM properties.
  * <li><b>/sessions</b> - Deprecated. Use expire.
- * <li><b>/expire?path=/xxx</b> - List session idle timeinformation about the
+ * <li><b>/expire?path=/xxx</b> - List session idle time information about the
  *     web application attached to context path <code>/xxx</code> for this
  *     virtual host.</li>
- * <li><b>/expire?path=/xxx&idle=mm</b> - Expire sessions
+ * <li><b>/expire?path=/xxx&amp;idle=mm</b> - Expire sessions
  *     for the context path <code>/xxx</code> which were idle for at
  *     least mm minutes.</li>
  * <li><b>/start?path=/xxx</b> - Start the web application attached to
@@ -207,7 +205,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
      */
     protected transient Host host = null;
 
-    
+
     /**
      * The host appBase.
      * @deprecated  Unused
@@ -226,7 +224,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
      * The associated deployer ObjectName.
      */
     protected ObjectName oname = null;
-    
+
 
     /**
      * The global JNDI <code>NamingContext</code> for this server,
@@ -256,9 +254,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
      */
     @Override
     public Wrapper getWrapper() {
-
-        return (this.wrapper);
-
+        return this.wrapper;
     }
 
 
@@ -290,7 +286,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
 
         // Retrieve the MBean server
         mBeanServer = Registry.getRegistry(null, null).getMBeanServer();
-        
+
     }
 
 
@@ -339,11 +335,11 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
         String war = request.getParameter("war");
         String tag = request.getParameter("tag");
         boolean update = false;
-        if ((request.getParameter("update") != null) 
+        if ((request.getParameter("update") != null)
             && (request.getParameter("update").equals("true"))) {
             update = true;
         }
-        
+
         boolean statusLine = false;
         if ("true".equals(request.getParameter("statusLine"))) {
             statusLine = true;
@@ -435,7 +431,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
         }
         String tag = request.getParameter("tag");
         boolean update = false;
-        if ((request.getParameter("update") != null) 
+        if ((request.getParameter("update") != null)
             && (request.getParameter("update").equals("true"))) {
             update = true;
         }
@@ -540,18 +536,22 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
 
     /**
      * Find potential memory leaks caused by web application reload.
+     *
+     * @param statusLine Print a status line
+     * @param writer The output writer
+     * @param smClient StringManager for the client's locale
      */
     protected void findleaks(boolean statusLine, PrintWriter writer,
             StringManager smClient) {
-        
+
         if (!(host instanceof StandardHost)) {
             writer.println(smClient.getString("managerServlet.findleaksFail"));
             return;
         }
-        
+
         String[] results =
             ((StandardHost) host).findReloadedContextMemoryLeaks();
-        
+
         if (results.length > 0) {
             if (statusLine) {
                 writer.println(
@@ -570,9 +570,11 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
 
 
     /**
-     * Write some VM info
+     * Write some VM info.
      *
-     * @param writer
+     * @param writer The output writer
+     * @param smClient StringManager for the client's locale
+     * @param requestedLocales the client's locales
      */
     protected void vmInfo(PrintWriter writer, StringManager smClient,
             Enumeration<Locale> requestedLocales) {
@@ -581,9 +583,11 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
     }
 
     /**
-     * Write a JVM thread dump
+     * Write a JVM thread dump.
      *
-     * @param writer
+     * @param writer The output writer
+     * @param smClient StringManager for the client's locale
+     * @param requestedLocales the client's locales
      */
     protected void threadDump(PrintWriter writer, StringManager smClient,
             Enumeration<Locale> requestedLocales) {
@@ -594,11 +598,12 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
 
     /**
      * Store server configuration.
-     * 
-     * @param path Optional context path to save
+     *
+     * @param writer   Destination for any user message(s) during this operation
+     * @param path     Optional context path to save
+     * @param smClient i18n support for current client's locale
      */
-    protected synchronized void save(PrintWriter writer, String path,
-            StringManager smClient) {
+    protected synchronized void save(PrintWriter writer, String path, StringManager smClient) {
 
         Server server = ((Engine)host.getParent()).getService().getServer();
 
@@ -616,7 +621,6 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
                 log("managerServlet.storeConfig", e);
                 writer.println(smClient.getString("managerServlet.exception",
                         e.toString()));
-                return;
             }
         } else {
             String contextPath = path;
@@ -637,10 +641,8 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
                 log("managerServlet.save[" + path + "]", e);
                 writer.println(smClient.getString("managerServlet.exception",
                         e.toString()));
-                return;
             }
         }
-
     }
 
 
@@ -727,7 +729,11 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
                             return;
                         }
                         // Rename uploaded WAR file
-                        uploadedWar.renameTo(deployedWar);
+                        if (!uploadedWar.renameTo(deployedWar)) {
+                            writer.println(smClient.getString("managerServlet.renameFail",
+                                    uploadedWar, deployedWar));
+                            return;
+                        }
                     }
                     if (tag != null) {
                         // Copy WAR to the host's appBase
@@ -745,7 +751,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
                     e.toString()));
             return;
         }
-        
+
         writeDeployResult(writer, smClient, name, displayPath);
     }
 
@@ -772,7 +778,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
         String baseName = cn.getBaseName();
         String name = cn.getName();
         String displayPath = cn.getDisplayName();
-        
+
         // Find the local WAR file
         File localWar = new File(new File(versioned, tag), baseName + ".war");
 
@@ -803,7 +809,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
                     e.toString()));
             return;
         }
-        
+
         writeDeployResult(writer, smClient, name, displayPath);
     }
 
@@ -821,14 +827,14 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
      */
     protected void deploy(PrintWriter writer, String config, ContextName cn,
             String war, boolean update, StringManager smClient) {
-        
+
         if (config != null && config.length() == 0) {
             config = null;
         }
         if (war != null && war.length() == 0) {
             war = null;
         }
-        
+
         if (debug >= 1) {
             if (config != null && config.length() > 0) {
                 if (war != null) {
@@ -847,7 +853,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
                 }
             }
         }
-        
+
         if (!validateContextName(cn, writer, smClient)) {
             return;
         }
@@ -855,7 +861,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
         String name = cn.getName();
         String baseName = cn.getBaseName();
         String displayPath = cn.getDisplayName();
-        
+
         // If app exists deployment can only proceed if update is true
         // Note existing files will be deleted and then replaced
         Context context = (Context) host.findChild(name);
@@ -864,14 +870,14 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
                     displayPath));
             return;
         }
-        
+
         if (config != null && (config.startsWith("file:"))) {
             config = config.substring("file:".length());
         }
         if (war != null && (war.startsWith("file:"))) {
             war = war.substring("file:".length());
         }
-        
+
         try {
             if (isServiced(name)) {
                 writer.println(smClient.getString("managerServlet.inService", displayPath));
@@ -919,7 +925,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
             writer.println(smClient.getString("managerServlet.exception",
                     t.toString()));
         }
-        
+
     }
 
 
@@ -1051,44 +1057,58 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
             writer.println(smClient.getString("managerServlet.resourcesAll"));
         }
 
-        Class<?> clazz = null;
-        try {
-            if (type != null) {
-                clazz = Class.forName(type);
-            }
-        } catch (Throwable t) {
-            ExceptionUtils.handleThrowable(t);
-            log("ManagerServlet.resources[" + type + "]", t);
-            writer.println(smClient.getString("managerServlet.exception",
-                    t.toString()));
-            return;
-        }
-
-        printResources(writer, "", global, type, clazz, smClient);
+        printResources(writer, "", global, type, smClient);
 
     }
 
 
     /**
      * List the resources of the given context.
+     *
+     * @param writer Writer to render to
+     * @param prefix Path for recursion
+     * @param namingContext The naming context for lookups
+     * @param type Fully qualified class name of the resource type of interest,
+     *  or <code>null</code> to list resources of all types
+     * @param clazz Unused
+     * @param smClient i18n support for current client's locale
+     *
+     * @deprecated Use {@link #printResources(PrintWriter, String,
+     *             javax.naming.Context, String, StringManager)}
+     *             This method will be removed in Tomcat 10.x onwards
+     */
+    @Deprecated
+    protected void printResources(PrintWriter writer, String prefix,
+            javax.naming.Context namingContext,
+            String type, Class<?> clazz, StringManager smClient) {
+        printResources(writer, prefix, namingContext, type, smClient);
+    }
+
+
+    /**
+     * List the resources of the given context.
+     * @param writer Writer to render to
+     * @param prefix Path for recursion
+     * @param namingContext The naming context for lookups
+     * @param type Fully qualified class name of the resource type of interest,
+     *  or <code>null</code> to list resources of all types
+     * @param smClient i18n support for current client's locale
      */
     protected void printResources(PrintWriter writer, String prefix,
                                   javax.naming.Context namingContext,
-                                  String type, Class<?> clazz,
+                                  String type,
                                   StringManager smClient) {
-
         try {
             NamingEnumeration<Binding> items = namingContext.listBindings("");
             while (items.hasMore()) {
                 Binding item = items.next();
-                if (item.getObject() instanceof javax.naming.Context) {
-                    printResources
-                        (writer, prefix + item.getName() + "/",
-                         (javax.naming.Context) item.getObject(), type, clazz,
-                         smClient);
+                Object obj = item.getObject();
+                if (obj instanceof javax.naming.Context) {
+                    printResources(writer, prefix + item.getName() + "/",
+                            (javax.naming.Context) obj, type, smClient);
                 } else {
-                    if ((clazz != null) &&
-                        (!(clazz.isInstance(item.getObject())))) {
+                    if (type != null && (obj == null ||
+                            !IntrospectionUtils.isInstance(obj.getClass(), type))) {
                         continue;
                     }
                     writer.print(prefix + item.getName());
@@ -1104,7 +1124,6 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
             writer.println(smClient.getString("managerServlet.exception",
                     t.toString()));
         }
-
     }
 
 
@@ -1162,7 +1181,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
             if(manager == null) {
                 writer.println(smClient.getString("managerServlet.noManager",
                         RequestUtil.filter(displayPath)));
-                return;               
+                return;
             }
             int maxCount = 60;
             int histoInterval = 1;
@@ -1301,7 +1320,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
         try {
             Context context = (Context) host.findChild(cn.getName());
             if (context == null) {
-                writer.println(smClient.getString("managerServlet.noContext", 
+                writer.println(smClient.getString("managerServlet.noContext",
                         RequestUtil.filter(displayPath)));
                 return;
             }
@@ -1455,7 +1474,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
     /**
      * Return a File object representing the "application root" directory
      * for our associated Host.
-     * 
+     *
      * @deprecated  Unused
      */
     @Deprecated
@@ -1482,61 +1501,61 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
     /**
      * Invoke the isDeployed method on the deployer.
      */
-    protected boolean isDeployed(String name) 
+    protected boolean isDeployed(String name)
         throws Exception {
         String[] params = { name };
         String[] signature = { "java.lang.String" };
-        Boolean result = 
+        Boolean result =
             (Boolean) mBeanServer.invoke(oname, "isDeployed", params, signature);
         return result.booleanValue();
     }
-    
+
 
     /**
      * Invoke the check method on the deployer.
      */
-    protected void check(String name) 
+    protected void check(String name)
         throws Exception {
         String[] params = { name };
         String[] signature = { "java.lang.String" };
         mBeanServer.invoke(oname, "check", params, signature);
     }
-    
+
 
     /**
      * Invoke the isServiced method on the deployer.
      */
-    protected boolean isServiced(String name) 
+    protected boolean isServiced(String name)
         throws Exception {
         String[] params = { name };
         String[] signature = { "java.lang.String" };
-        Boolean result = 
+        Boolean result =
             (Boolean) mBeanServer.invoke(oname, "isServiced", params, signature);
         return result.booleanValue();
     }
-    
+
 
     /**
      * Invoke the addServiced method on the deployer.
      */
-    protected void addServiced(String name) 
+    protected void addServiced(String name)
         throws Exception {
         String[] params = { name };
         String[] signature = { "java.lang.String" };
         mBeanServer.invoke(oname, "addServiced", params, signature);
     }
-    
+
 
     /**
      * Invoke the removeServiced method on the deployer.
      */
-    protected void removeServiced(String name) 
+    protected void removeServiced(String name)
         throws Exception {
         String[] params = { name };
         String[] signature = { "java.lang.String" };
         mBeanServer.invoke(oname, "removeServiced", params, signature);
     }
-    
+
 
     /**
      * Delete the specified directory, including all of its contents and
@@ -1654,14 +1673,14 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
 
     protected static boolean validateContextName(ContextName cn,
             PrintWriter writer, StringManager smClient) {
-        
+
         // ContextName should be non-null with a path that is empty or starts
         // with /
         if (cn != null &&
                 (cn.getPath().startsWith("/") || cn.getPath().equals(""))) {
             return true;
         }
-        
+
         String path = null;
         if (cn != null) {
             path = RequestUtil.filter(cn.getPath());
@@ -1689,7 +1708,7 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
         return result;
     }
 
-    
+
     /**
      * Copy the specified file or directory to the destination.
      *
@@ -1697,9 +1716,9 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
      * @param dest File object representing the destination
      */
     public static boolean copyInternal(File src, File dest, byte[] buf) {
-        
+
         boolean result = true;
-        
+
         String files[] = null;
         if (src.isDirectory()) {
             files = src.list();
@@ -1751,8 +1770,8 @@ public class ManagerServlet extends HttpServlet implements ContainerServlet {
             }
         }
         return result;
-        
+
     }
-    
-    
+
+
 }

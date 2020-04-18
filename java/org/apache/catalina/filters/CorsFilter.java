@@ -18,7 +18,6 @@ package org.apache.catalina.filters;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -38,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.http.RequestUtil;
 import org.apache.tomcat.util.http.ResponseUtil;
 import org.apache.tomcat.util.res.StringManager;
 
@@ -53,6 +53,7 @@ import org.apache.tomcat.util.res.StringManager;
  * <p>
  * By default, it also sets following request attributes, that help to
  * determine the nature of the request downstream.
+ * </p>
  * <ul>
  * <li><b>cors.isCorsRequest:</b> Flag to determine if the request is a CORS
  * request. Set to <code>true</code> if a CORS request; <code>false</code>
@@ -72,7 +73,6 @@ import org.apache.tomcat.util.res.StringManager;
  * <li><b>cors.request.headers:</b> Request headers sent as
  * 'Access-Control-Request-Headers' header, for pre-flight request.</li>
  * </ul>
- * </p>
  *
  * @see <a href="http://www.w3.org/TR/cors/">CORS specification</a>
  *
@@ -639,9 +639,9 @@ public class CorsFilter implements Filter {
         if (originHeader != null) {
             if (originHeader.isEmpty()) {
                 requestType = CORSRequestType.INVALID_CORS;
-            } else if (!isValidOrigin(originHeader)) {
+            } else if (!RequestUtil.isValidOrigin(originHeader)) {
                 requestType = CORSRequestType.INVALID_CORS;
-            } else if (isLocalOrigin(request, originHeader)) {
+            } else if (RequestUtil.isSameOrigin(request, originHeader)) {
                 return CORSRequestType.NOT_CORS;
             } else {
                 String method = request.getMethod();
@@ -681,36 +681,6 @@ public class CorsFilter implements Filter {
         }
 
         return requestType;
-    }
-
-
-    private boolean isLocalOrigin(HttpServletRequest request, String origin) {
-
-        // Build scheme://host:port from request
-        StringBuilder target = new StringBuilder();
-        String scheme = request.getScheme();
-        if (scheme == null) {
-            return false;
-        } else {
-            scheme = scheme.toLowerCase(Locale.ENGLISH);
-        }
-        target.append(scheme);
-        target.append("://");
-
-        String host = request.getServerName();
-        if (host == null) {
-            return false;
-        }
-        target.append(host);
-
-        int port = request.getServerPort();
-        if ("http".equals(scheme) && port != 80 ||
-                "https".equals(scheme) && port != 443) {
-            target.append(':');
-            target.append(port);
-        }
-
-        return origin.equalsIgnoreCase(target.toString());
     }
 
 
@@ -861,34 +831,13 @@ public class CorsFilter implements Filter {
      *
      * @param origin
      * @see <a href="http://tools.ietf.org/html/rfc952">RFC952</a>
+     *
+     * @deprecated This will be removed in Tomcat 10
+     *             Use {@link RequestUtil#isValidOrigin(String)}
      */
+    @Deprecated
     protected static boolean isValidOrigin(String origin) {
-        // Checks for encoded characters. Helps prevent CRLF injection.
-        if (origin.contains("%")) {
-            return false;
-        }
-
-        // "null" is a valid origin
-        if ("null".equals(origin)) {
-            return true;
-        }
-
-        // RFC6454, section 4. "If uri-scheme is file, the implementation MAY
-        // return an implementation-defined value.". No limits are placed on
-        // that value so treat all file URIs as valid origins.
-        if (origin.startsWith("file://")) {
-            return true;
-        }
-
-        URI originURI;
-        try {
-            originURI = new URI(origin);
-        } catch (URISyntaxException e) {
-            return false;
-        }
-        // If scheme for URI is null, return false. Return true otherwise.
-        return originURI.getScheme() != null;
-
+        return RequestUtil.isValidOrigin(origin);
     }
 
 
@@ -1080,7 +1029,7 @@ public class CorsFilter implements Filter {
          */
         SIMPLE,
         /**
-         * A HTTP request that needs to be pre-flighted.
+         * An HTTP request that needs to be pre-flighted.
          */
         ACTUAL,
         /**

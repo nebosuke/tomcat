@@ -5,20 +5,20 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.catalina.ha.session;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 import org.apache.catalina.Cluster;
 import org.apache.catalina.Container;
@@ -33,13 +33,13 @@ import org.apache.catalina.session.ManagerBase;
 import org.apache.catalina.tribes.io.ReplicationStream;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.collections.SynchronizedStack;
 
 /**
- * 
+ *
  * @author Filip Hanik
  */
-public abstract class ClusterManagerBase extends ManagerBase
-        implements ClusterManager {
+public abstract class ClusterManagerBase extends ManagerBase implements ClusterManager {
 
     private final Log log = LogFactory.getLog(ClusterManagerBase.class); // must not be static
 
@@ -62,6 +62,14 @@ public abstract class ClusterManagerBase extends ManagerBase
      * send all actions of session attributes.
      */
     private boolean recordAllActions = false;
+
+    private SynchronizedStack<DeltaRequest> deltaRequestPool = new SynchronizedStack<DeltaRequest>();
+
+
+    protected SynchronizedStack<DeltaRequest> getDeltaRequestPool() {
+        return deltaRequestPool;
+    }
+
 
     @Override
     public CatalinaCluster getCluster() {
@@ -138,21 +146,25 @@ public abstract class ClusterManagerBase extends ManagerBase
 
 
     public static ClassLoader[] getClassLoaders(Container container) {
-        Loader loader = null;
+        ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        Loader loader = container.getLoader();
         ClassLoader classLoader = null;
-        if (container != null) loader = container.getLoader();
-        if (loader != null) classLoader = loader.getClassLoader();
-        else classLoader = Thread.currentThread().getContextClassLoader();
-        if ( classLoader == Thread.currentThread().getContextClassLoader() ) {
+        if (loader != null) {
+            classLoader = loader.getClassLoader();
+        }
+        if (classLoader == null) {
+            classLoader = tccl;
+        }
+        if (classLoader == tccl) {
             return new ClassLoader[] {classLoader};
         } else {
-            return new ClassLoader[] {classLoader,Thread.currentThread().getContextClassLoader()};
+            return new ClassLoader[] {classLoader, tccl};
         }
     }
 
 
     public ClassLoader[] getClassLoaders() {
-        return getClassLoaders(container);
+        return getClassLoaders(getContainer());
     }
 
     @Override
@@ -164,7 +176,7 @@ public abstract class ClusterManagerBase extends ManagerBase
     public ReplicationStream getReplicationStream(byte[] data, int offset, int length) throws IOException {
         ByteArrayInputStream fis = new ByteArrayInputStream(data, offset, length);
         return new ReplicationStream(fis, getClassLoaders());
-    }    
+    }
 
 
     //  ---------------------------------------------------- persistence handler
@@ -175,7 +187,7 @@ public abstract class ClusterManagerBase extends ManagerBase
      */
     @Override
     public void load() {
-        // NOOP 
+        // NOOP
     }
 
     /**
@@ -200,14 +212,22 @@ public abstract class ClusterManagerBase extends ManagerBase
         copy.setSecureRandomAlgorithm(getSecureRandomAlgorithm());
         if (getSessionIdGenerator() != null) {
             try {
-                SessionIdGenerator copyIdGenerator = sessionIdGeneratorClass.newInstance();
+                SessionIdGenerator copyIdGenerator = sessionIdGeneratorClass.getConstructor().newInstance();
                 copyIdGenerator.setSessionIdLength(getSessionIdGenerator().getSessionIdLength());
                 copyIdGenerator.setJvmRoute(getSessionIdGenerator().getJvmRoute());
                 copy.setSessionIdGenerator(copyIdGenerator);
             } catch (InstantiationException e) {
-             // Ignore
+                // Ignore
             } catch (IllegalAccessException e) {
-             // Ignore
+                // Ignore
+            } catch (IllegalArgumentException e) {
+                // Ignore
+            } catch (SecurityException e) {
+                // Ignore
+            } catch (InvocationTargetException e) {
+                // Ignore
+            } catch (NoSuchMethodException e) {
+                // Ignore
             }
         }
         copy.setRecordAllActions(isRecordAllActions());
@@ -229,7 +249,7 @@ public abstract class ClusterManagerBase extends ManagerBase
 
                     if(replicationValve == null && log.isDebugEnabled()) {
                         log.debug("no ReplicationValve found for CrossContext Support");
-                    }//endif 
+                    }//endif
                 }//end if
             }//endif
         }//end if

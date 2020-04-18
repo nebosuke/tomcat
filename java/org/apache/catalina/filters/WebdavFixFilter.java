@@ -27,6 +27,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.tomcat.util.res.StringManager;
+
 /**
  * Filter that attempts to force MS WebDAV clients connecting on port 80 to use
  * a WebDAV client that actually works. Other workarounds that might help
@@ -37,13 +39,13 @@ import javax.servlet.http.HttpServletResponse;
  *   <li>Cancelling the first authentication dialog box and then trying to
  *       reconnect.</li>
  * </ul>
- * 
+ *
  * Generally each different version of the MS client has a different set of
  * problems.
  * <p>
  * TODO: Update this filter to recognise specific MS clients and apply the
  *       appropriate workarounds for that particular client
- * <p>      
+ * <p>
  * As a filter, this is configured in web.xml like any other Filter. You usually
  * want to map this filter to whatever your WebDAV servlet is mapped to.
  * <p>
@@ -59,8 +61,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class WebdavFixFilter implements Filter {
 
-    private static final String LOG_MESSAGE_PREAMBLE =
-        "WebdavFixFilter: Detected client problem: ";
+    protected static final StringManager sm = StringManager.getManager(WebdavFixFilter.class);
 
     /* Start string for all versions */
     private static final String UA_MINIDIR_START =
@@ -68,7 +69,7 @@ public class WebdavFixFilter implements Filter {
     /* XP 32-bit SP3 */
     private static final String UA_MINIDIR_5_1_2600 =
         "Microsoft-WebDAV-MiniRedir/5.1.2600";
-    
+
     /* XP 64-bit SP2 */
     private static final String UA_MINIDIR_5_2_3790 =
         "Microsoft-WebDAV-MiniRedir/5.2.3790";
@@ -98,7 +99,7 @@ public class WebdavFixFilter implements Filter {
         HttpServletRequest httpRequest = ((HttpServletRequest) request);
         HttpServletResponse httpResponse = ((HttpServletResponse) response);
         String ua = httpRequest.getHeader("User-Agent");
-        
+
         if (ua == null || ua.length() == 0 ||
                 !ua.startsWith(UA_MINIDIR_START)) {
             // No UA or starts with non MS value
@@ -110,20 +111,19 @@ public class WebdavFixFilter implements Filter {
         } else if (ua.startsWith(UA_MINIDIR_5_2_3790)) {
             // XP 64-bit SP2
             if (!"".equals(httpRequest.getContextPath())) {
-                log(request,
-                        "XP-x64-SP2 clients only work with the root context");
+                request.getServletContext().log(sm.getString("webDavFilter.xpRootContext"));
             }
             // Namespace issue maybe
             // see http://greenbytes.de/tech/webdav/webdav-redirector-list.html
-            log(request, "XP-x64-SP2 is known not to work with WebDAV Servlet");
-            
+            request.getServletContext().log(sm.getString("webDavFilter.xpProblem"));
+
             chain.doFilter(request, response);
         } else {
             // Don't know which MS client it is - try the redirect with an
             // explicit port in the hope that it moves the client to a different
             // WebDAV implementation that works
             httpResponse.sendRedirect(buildRedirect(httpRequest));
-        }        
+        }
     }
 
     private String buildRedirect(HttpServletRequest request) {
@@ -141,9 +141,4 @@ public class WebdavFixFilter implements Filter {
         return location.toString();
     }
 
-    private void log(ServletRequest request, String msg) {
-        StringBuilder builder = new StringBuilder(LOG_MESSAGE_PREAMBLE);
-        builder.append(msg);
-        request.getServletContext().log(builder.toString());
-    }
 }

@@ -30,6 +30,7 @@ public interface Transformation {
 
     /**
      * Sets the next transformation in the pipeline.
+     * @param t The next transformation
      */
     void setNext(Transformation t);
 
@@ -52,6 +53,9 @@ public interface Transformation {
     /**
      * Obtain the extension that describes the information to be returned to the
      * client.
+     *
+     * @return The extension information that describes the parameters that have
+     *         been agreed for this transformation
      */
     Extension getExtensionResponse();
 
@@ -63,6 +67,11 @@ public interface Transformation {
      * @param rsv       The reserved bits for the frame currently being
      *                      processed
      * @param dest      The buffer in which the data is to be written
+     *
+     * @return The result of trying to read more data from the transform
+     *
+     * @throws IOException If an I/O error occurs while reading data from the
+     *         transform
      */
     TransformationResult getMoreData(byte opCode, boolean fin, int rsv, ByteBuffer dest) throws IOException;
 
@@ -92,8 +101,11 @@ public interface Transformation {
      * @return  The list of messages after this any any subsequent
      *          transformations have been applied. The size of the returned list
      *          may be bigger or smaller than the size of the input list
+     *
+     * @throws IOException If an error occurs during the transformation of the
+     *                     message parts
      */
-    List<MessagePart> sendMessagePart(List<MessagePart> messageParts);
+    List<MessagePart> sendMessagePart(List<MessagePart> messageParts) throws IOException;
 
     /**
      * Clean-up any resources that were used by the transformation.

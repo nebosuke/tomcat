@@ -20,6 +20,7 @@ import org.apache.coyote.AbstractProtocol;
 import org.apache.coyote.Processor;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.compat.JreCompat;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.AprEndpoint;
 import org.apache.tomcat.util.net.AprEndpoint.Handler;
@@ -35,8 +36,8 @@ import org.apache.tomcat.util.net.SocketWrapper;
  * @author Costin Manolache
  */
 public class AjpAprProtocol extends AbstractAjpProtocol<Long> {
-    
-    
+
+
     private static final Log log = LogFactory.getLog(AjpAprProtocol.class);
 
     @Override
@@ -61,6 +62,7 @@ public class AjpAprProtocol extends AbstractAjpProtocol<Long> {
 
     public AjpAprProtocol() {
         endpoint = new AprEndpoint();
+        endpoint.setAddress(JreCompat.getInstance().getLoopbackAddress());
         cHandler = new AjpConnectionHandler(this);
         ((AprEndpoint) endpoint).setHandler(cHandler);
         setSoLinger(Constants.DEFAULT_CONNECTION_LINGER);
@@ -70,7 +72,7 @@ public class AjpAprProtocol extends AbstractAjpProtocol<Long> {
         ((AprEndpoint) endpoint).setUseSendfile(false);
     }
 
-    
+
     // ----------------------------------------------------- Instance Variables
 
 
@@ -148,10 +150,11 @@ public class AjpAprProtocol extends AbstractAjpProtocol<Long> {
             processor.setAjpFlush(proto.getAjpFlush());
             processor.setTomcatAuthentication(proto.tomcatAuthentication);
             processor.setTomcatAuthorization(proto.getTomcatAuthorization());
-            processor.setRequiredSecret(proto.requiredSecret);
+            processor.setSecret(proto.getSecret());
             processor.setKeepAliveTimeout(proto.getKeepAliveTimeout());
             processor.setClientCertProvider(proto.getClientCertProvider());
             processor.setMaxCookieCount(proto.getMaxCookieCount());
+            processor.setAllowedRequestAttributesPatternPattern(proto.getAllowedRequestAttributesPatternPattern());
             register(processor);
             return processor;
         }

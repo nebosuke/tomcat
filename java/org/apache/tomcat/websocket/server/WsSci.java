@@ -16,6 +16,7 @@
  */
 package org.apache.tomcat.websocket.server;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,6 +34,7 @@ import javax.websocket.server.ServerEndpointConfig;
 
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.compat.JreCompat;
 import org.apache.tomcat.util.res.StringManager;
 
 /**
@@ -47,8 +49,7 @@ public class WsSci implements ServletContainerInitializer {
     private static boolean logMessageWritten = false;
 
     private final Log log = LogFactory.getLog(WsSci.class); // must not be static
-    private static final StringManager sm =
-            StringManager.getManager(Constants.PACKAGE_NAME);
+    private static final StringManager sm = StringManager.getManager(WsSci.class);
 
     @Override
     public void onStartup(Set<Class<?>> clazzes, ServletContext ctx)
@@ -80,10 +81,14 @@ public class WsSci implements ServletContainerInitializer {
             String wsPackage = ContainerProvider.class.getName();
             wsPackage = wsPackage.substring(0, wsPackage.lastIndexOf('.') + 1);
             for (Class<?> clazz : clazzes) {
+                JreCompat jreCompat = JreCompat.getInstance();
                 int modifiers = clazz.getModifiers();
                 if (!Modifier.isPublic(modifiers) ||
-                        Modifier.isAbstract(modifiers)) {
-                    // Non-public or abstract - skip it.
+                        Modifier.isAbstract(modifiers) ||
+                        Modifier.isInterface(modifiers) ||
+                        !jreCompat.isExported(clazz)) {
+                    // Non-public, abstract, interface or not in an exported
+                    // package (Java 9+) - skip it.
                     continue;
                 }
                 // Protect against scanning the WebSocket API JARs
@@ -92,7 +97,7 @@ public class WsSci implements ServletContainerInitializer {
                 }
                 if (ServerApplicationConfig.class.isAssignableFrom(clazz)) {
                     serverApplicationConfigs.add(
-                            (ServerApplicationConfig) clazz.newInstance());
+                            (ServerApplicationConfig) clazz.getConstructor().newInstance());
                 }
                 if (Endpoint.class.isAssignableFrom(clazz)) {
                     @SuppressWarnings("unchecked")
@@ -106,7 +111,15 @@ public class WsSci implements ServletContainerInitializer {
             }
         } catch (InstantiationException e) {
             throw new ServletException(e);
+        } catch (IllegalArgumentException e) {
+            throw new ServletException(e);
+        } catch (SecurityException e) {
+            throw new ServletException(e);
         } catch (IllegalAccessException e) {
+            throw new ServletException(e);
+        } catch (InvocationTargetException e) {
+            throw new ServletException(e);
+        } catch (NoSuchMethodException e) {
             throw new ServletException(e);
         }
 
@@ -139,7 +152,7 @@ public class WsSci implements ServletContainerInitializer {
             }
             // Deploy POJOs
             for (Class<?> clazz : filteredPojoEndpoints) {
-                sc.addEndpoint(clazz);
+                sc.addEndpoint(clazz, true);
             }
         } catch (DeploymentException e) {
             throw new ServletException(e);

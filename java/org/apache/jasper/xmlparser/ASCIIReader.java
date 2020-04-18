@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,8 +45,8 @@ public class ASCIIReader extends Reader {
     // Constructors
     //
 
-    /** 
-     * Constructs an ASCII reader from the specified input stream 
+    /**
+     * Constructs an ASCII reader from the specified input stream
      * and buffer size.
      *
      * @param inputStream The input stream.
@@ -69,7 +69,7 @@ public class ASCIIReader extends Reader {
      * should override this method.
      *
      * @return     The character read, as an integer in the range 0 to 127
-     *             (<tt>0x00-0x7f</tt>), or -1 if the end of the stream has
+     *             (<code>0x00-0x7f</code>), or -1 if the end of the stream has
      *             been reached
      *
      * @exception  IOException  If an I/O error occurs

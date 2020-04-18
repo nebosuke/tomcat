@@ -85,8 +85,8 @@ public abstract class PojoMessageHandlerBase<T>
             }
         } catch (IOException ioe) {
             throw new IllegalStateException(ioe);
-        } catch (EncodeException ee) {
-            throw new IllegalStateException(ee);
+        } catch (EncodeException e) {
+            throw new IllegalStateException(e);
         }
     }
 

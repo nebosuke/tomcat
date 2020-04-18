@@ -46,18 +46,21 @@ import org.apache.catalina.tribes.group.RpcChannel;
 import org.apache.catalina.tribes.io.XByteBuffer;
 import org.apache.catalina.tribes.membership.MemberImpl;
 import org.apache.catalina.tribes.util.Arrays;
+import org.apache.catalina.tribes.util.StringManager;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
 /**
- *
- * @version 1.0
+ * @param <K> The type of Key
+ * @param <V> The type of Value
  */
 public abstract class AbstractReplicatedMap<K,V>
         implements Map<K,V>, Serializable, RpcCallback, ChannelListener,
         MembershipListener, Heartbeat {
 
     private static final long serialVersionUID = 1L;
+
+    protected static final StringManager sm = StringManager.getManager(AbstractReplicatedMap.class);
 
     private final Log log = LogFactory.getLog(AbstractReplicatedMap.class); // must not be static
 
@@ -1016,7 +1019,7 @@ public abstract class AbstractReplicatedMap<K,V>
                     if ( backup != null && backup.length > 0) {
                         getChannel().send(backup, msg, getChannelSendOptions());
                     }
-                    
+
                     //invalidate the previous primary
                     msg = new MapMessage(getMapContextName(),MapMessage.MSG_PROXY,false,(Serializable)key,null,null,channel.getLocalMember(false),backup);
                     Member[] dest = getMapMembersExcl(backup);
@@ -1613,11 +1616,13 @@ public abstract class AbstractReplicatedMap<K,V>
          * @return Object
          */
         @Override
-        public Object clone() {
-            MapMessage msg = new MapMessage(this.mapId, this.msgtype, this.diff, this.key, this.value, this.diffvalue, this.primary, this.nodes);
-            msg.keydata = this.keydata;
-            msg.valuedata = this.valuedata;
-            return msg;
+        public MapMessage clone() {
+            try {
+                return (MapMessage) super.clone();
+            } catch (CloneNotSupportedException e) {
+                // Not possible
+                throw new AssertionError();
+            }
         }
     } //MapMessage
 

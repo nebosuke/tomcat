@@ -14,7 +14,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.coyote;
 
 import java.io.IOException;
@@ -29,12 +28,12 @@ import org.apache.tomcat.util.http.MimeHeaders;
 import org.apache.tomcat.util.http.Parameters;
 
 /**
- * This is a low-level, efficient representation of a server request. Most 
- * fields are GC-free, expensive operations are delayed until the  user code 
+ * This is a low-level, efficient representation of a server request. Most
+ * fields are GC-free, expensive operations are delayed until the  user code
  * needs the information.
  *
  * Processing is delegated to modules, using a hook mechanism.
- * 
+ *
  * This class is not intended for user code - it is used internally by tomcat
  * for processing the request in the most efficient way. Users ( servlets ) can
  * access the information using a facade, which provides the high-level view
@@ -50,7 +49,7 @@ import org.apache.tomcat.util.http.Parameters;
  * Tomcat defines a number of attributes:
  * <ul>
  *   <li>"org.apache.tomcat.request" - allows access to the low-level
- *       request object in trusted applications 
+ *       request object in trusted applications
  * </ul>
  *
  * @author James Duncan Davidson [duncan@eng.sun.com]
@@ -67,17 +66,13 @@ public final class Request {
 
     // ----------------------------------------------------------- Constructors
 
-
     public Request() {
-
         parameters.setQuery(queryMB);
         parameters.setURLDecoder(urlDecoder);
-
     }
 
 
     // ----------------------------------------------------- Instance Variables
-
 
     private int serverPort = -1;
     private MessageBytes serverNameMB = MessageBytes.newInstance();
@@ -99,7 +94,7 @@ public final class Request {
     private MessageBytes localNameMB = MessageBytes.newInstance();
     private MessageBytes remoteHostMB = MessageBytes.newInstance();
     private MessageBytes localAddrMB = MessageBytes.newInstance();
-     
+
     private MimeHeaders headers = new MimeHeaders();
 
     private MessageBytes instanceId = MessageBytes.newInstance();
@@ -152,7 +147,7 @@ public final class Request {
      * Get the instance id (or JVM route). Currently Ajp is sending it with each
      * request. In future this should be fixed, and sent only once ( or
      * 'negotiated' at config time so both tomcat and apache share the same name.
-     * 
+     *
      * @return the instance id
      */
     public MessageBytes instanceId() {
@@ -169,17 +164,17 @@ public final class Request {
         return urlDecoder;
     }
 
-    // -------------------- Request data --------------------
 
+    // -------------------- Request data --------------------
 
     public MessageBytes scheme() {
         return schemeMB;
     }
-    
+
     public MessageBytes method() {
         return methodMB;
     }
-    
+
     public MessageBytes unparsedURI() {
         return unparsedURIMB;
     }
@@ -199,13 +194,13 @@ public final class Request {
     public MessageBytes protocol() {
         return protoMB;
     }
-    
-    /** 
-     * Return the buffer holding the server name, if
-     * any. Use isNull() to check if there is no value
-     * set.
-     * This is the "virtual host", derived from the
-     * Host: header.
+
+    /**
+     * Get the "virtual host", derived from the Host: header associated with
+     * this request.
+     *
+     * @return The buffer holding the server name, if any. Use isNull() to check
+     *         if there is no value set.
      */
     public MessageBytes serverName() {
         return serverNameMB;
@@ -214,7 +209,7 @@ public final class Request {
     public int getServerPort() {
         return serverPort;
     }
-    
+
     public void setServerPort(int serverPort ) {
         this.serverPort=serverPort;
     }
@@ -229,42 +224,40 @@ public final class Request {
 
     public MessageBytes localName() {
         return localNameMB;
-    }    
+    }
 
     public MessageBytes localAddr() {
         return localAddrMB;
     }
-    
+
     public int getRemotePort(){
         return remotePort;
     }
-        
+
     public void setRemotePort(int port){
         this.remotePort = port;
     }
-    
+
     public int getLocalPort(){
         return localPort;
     }
-        
+
     public void setLocalPort(int port){
         this.localPort = port;
     }
 
-    // -------------------- encoding/type --------------------
 
+    // -------------------- encoding/type --------------------
 
     /**
      * Get the character encoding used for this request.
      */
     public String getCharacterEncoding() {
-
-        if (charEncoding != null)
+        if (charEncoding != null) {
             return charEncoding;
-
+        }
         charEncoding = ContentType.getCharsetFromContentType(getContentType());
         return charEncoding;
-
     }
 
 
@@ -288,7 +281,9 @@ public final class Request {
     }
 
     public long getContentLengthLong() {
-        if( contentLength > -1 ) return contentLength;
+        if( contentLength > -1 ) {
+            return contentLength;
+        }
 
         MessageBytes clB = headers.getUniqueValue("content-length");
         contentLength = (clB == null || clB.isNull()) ? -1 : clB.getLong();
@@ -298,8 +293,9 @@ public final class Request {
 
     public String getContentType() {
         contentType();
-        if ((contentTypeMB == null) || contentTypeMB.isNull()) 
+        if ((contentTypeMB == null) || contentTypeMB.isNull()) {
             return null;
+        }
         return contentTypeMB.toString();
     }
 
@@ -310,8 +306,9 @@ public final class Request {
 
 
     public MessageBytes contentType() {
-        if (contentTypeMB == null)
+        if (contentTypeMB == null) {
             contentTypeMB = headers.getValue("content-type");
+        }
         return contentTypeMB;
     }
 
@@ -331,20 +328,21 @@ public final class Request {
         return response;
     }
 
-    public void setResponse( Response response ) {
-        this.response=response;
-        response.setRequest( this );
+    public void setResponse(Response response) {
+        this.response = response;
+        response.setRequest(this);
     }
-    
+
     public void action(ActionCode actionCode, Object param) {
         if( hook==null && response!=null )
             hook=response.getHook();
-        
+
         if (hook != null) {
-            if( param==null ) 
+            if (param == null) {
                 hook.action(actionCode, this);
-            else
+            } else {
                 hook.action(actionCode, param);
+            }
         }
     }
 
@@ -359,7 +357,6 @@ public final class Request {
 
     // -------------------- Parameters --------------------
 
-
     public Parameters getParameters() {
         return parameters;
     }
@@ -367,7 +364,7 @@ public final class Request {
 
     // -------------------- Other attributes --------------------
     // We can use notes for most - need to discuss what is of general interest
-    
+
     public void setAttribute( String name, Object o ) {
         attributes.put( name, o );
     }
@@ -379,7 +376,7 @@ public final class Request {
     public Object getAttribute(String name ) {
         return attributes.get(name);
     }
-    
+
     public MessageBytes getRemoteUser() {
         return remoteUser;
     }
@@ -427,13 +424,20 @@ public final class Request {
     /**
      * Read data from the input buffer and put it into a byte chunk.
      *
-     * The buffer is owned by the protocol implementation - it will be reused on the next read.
-     * The Adapter must either process the data in place or copy it to a separate buffer if it needs
-     * to hold it. In most cases this is done during byte->char conversions or via InputStream. Unlike
-     * InputStream, this interface allows the app to process data in place, without copy.
+     * The buffer is owned by the protocol implementation - it will be reused on
+     * the next read. The Adapter must either process the data in place or copy
+     * it to a separate buffer if it needs to hold it. In most cases this is
+     * done during byte-&gt;char conversions or via InputStream. Unlike
+     * InputStream, this interface allows the app to process data in place,
+     * without copy.
      *
+     * @param chunk The destination to which to copy the data
+     *
+     * @return The number of bytes copied
+     *
+     * @throws IOException If an I/O error occurs during the copy
      */
-    public int doRead(ByteChunk chunk) 
+    public int doRead(ByteChunk chunk)
         throws IOException {
         int n = inputBuffer.doRead(chunk, this);
         if (n > 0) {
@@ -461,24 +465,23 @@ public final class Request {
     // -------------------- Per-Request "notes" --------------------
 
 
-    /** 
-     * Used to store private data. Thread data could be used instead - but 
+    /**
+     * Used to store private data. Thread data could be used instead - but
      * if you have the req, getting/setting a note is just a array access, may
      * be faster than ThreadLocal for very frequent operations.
-     * 
-     *  Example use: 
-     *   Jk:
-     *     HandlerRequest.HOSTBUFFER = 10 CharChunk, buffer for Host decoding
-     *     WorkerEnv: SSL_CERT_NOTE=16 - MessageBytes containing the cert
-     *                
+     *
+     *  Example use:
      *   Catalina CoyoteAdapter:
-     *      ADAPTER_NOTES = 1 - stores the HttpServletRequest object ( req/res)             
-     *      
-     *   To avoid conflicts, note in the range 0 - 8 are reserved for the 
-     *   servlet container ( catalina connector, etc ), and values in 9 - 16 
-     *   for connector use. 
-     *   
+     *      ADAPTER_NOTES = 1 - stores the HttpServletRequest object ( req/res)
+     *
+     *   To avoid conflicts, note in the range 0 - 8 are reserved for the
+     *   servlet container ( catalina connector, etc ), and values in 9 - 16
+     *   for connector use.
+     *
      *   17-31 range is not allocated or used.
+     *
+     * @param pos Index to use to store the note
+     * @param value The value to store at that index
      */
     public final void setNote(int pos, Object value) {
         notes[pos] = value;
@@ -490,7 +493,7 @@ public final class Request {
     }
 
 
-    // -------------------- Recycling -------------------- 
+    // -------------------- Recycling --------------------
 
 
     public void recycle() {
@@ -511,7 +514,7 @@ public final class Request {
         parameters.recycle();
 
         unparsedURIMB.recycle();
-        uriMB.recycle(); 
+        uriMB.recycle();
         decodedUriMB.recycle();
         queryMB.recycle();
         methodMB.recycle();

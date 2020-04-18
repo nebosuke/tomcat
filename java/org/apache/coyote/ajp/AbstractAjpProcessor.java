@@ -23,7 +23,12 @@ import java.net.InetAddress;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -79,6 +84,10 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
     protected static final byte[] pongMessageArray;
 
 
+    private static final Set<String> javaxAttributes;
+    private static final Set<String> iisTlsAttributes;
+
+
     static {
         // Allocate the end message array
         AjpMessage endMessage = new AjpMessage(16);
@@ -119,6 +128,26 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
         pongMessageArray = new byte[pongMessage.getLen()];
         System.arraycopy(pongMessage.getBuffer(), 0, pongMessageArray,
                 0, pongMessage.getLen());
+
+        // Build the Set of javax attributes
+        Set<String> s = new HashSet<String>();
+        s.add("javax.servlet.request.cipher_suite");
+        s.add("javax.servlet.request.key_size");
+        s.add("javax.servlet.request.ssl_session");
+        s.add("javax.servlet.request.X509Certificate");
+        javaxAttributes= Collections.unmodifiableSet(s);
+
+        Set<String> iis = new HashSet<String>();
+        iis.add("CERT_ISSUER");
+        iis.add("CERT_SUBJECT");
+        iis.add("CERT_COOKIE");
+        iis.add("HTTPS_SERVER_SUBJECT");
+        iis.add("CERT_FLAGS");
+        iis.add("HTTPS_SECRETKEYSIZE");
+        iis.add("CERT_SERIALNUMBER");
+        iis.add("HTTPS_SERVER_ISSUER");
+        iis.add("HTTPS_KEYSIZE");
+        iisTlsAttributes = Collections.unmodifiableSet(iis);
     }
 
 
@@ -300,9 +329,16 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
     /**
      * Required secret.
      */
+    @Deprecated
     protected String requiredSecret = null;
+    protected String secret = null;
+    public void setSecret(String secret) {
+        this.secret = secret;
+        this.requiredSecret = secret;
+    }
+    @Deprecated
     public void setRequiredSecret(String requiredSecret) {
-        this.requiredSecret = requiredSecret;
+        setSecret(requiredSecret);
     }
 
 
@@ -319,8 +355,14 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
     public String getClientCertProvider() { return clientCertProvider; }
     public void setClientCertProvider(String s) { this.clientCertProvider = s; }
 
-    // --------------------------------------------------------- Public Methods
 
+    private Pattern allowedRequestAttributesPatternPattern;
+    public void setAllowedRequestAttributesPatternPattern(Pattern allowedRequestAttributesPatternPattern) {
+        this.allowedRequestAttributesPatternPattern = allowedRequestAttributesPatternPattern;
+    }
+
+
+    // --------------------------------------------------------- Public Methods
 
     /**
      * Send an action to the connector.
@@ -567,22 +609,32 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
 
         rp.setStage(org.apache.coyote.Constants.STAGE_ENDED);
 
+        SocketState state;
+
         if (isAsync()) {
             if (getErrorState().isError()) {
                 request.updateCounters();
-                return SocketState.CLOSED;
+                state = SocketState.CLOSED;
             } else {
-                return SocketState.LONG;
+                state = SocketState.LONG;
             }
         } else {
             request.updateCounters();
-            if (getErrorState().isError()) {
-                return SocketState.CLOSED;
+            if (getErrorState().isError() || endpoint.isPaused()) {
+                state = SocketState.CLOSED;
             } else {
                 recycle(false);
-                return SocketState.OPEN;
+                state = SocketState.OPEN;
             }
         }
+
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("Socket: [" + socketWrapper +
+                    "], Status in: [" + status +
+                    "], State out: [" + state + "]");
+        }
+
+        return state;
     }
 
 
@@ -710,6 +762,7 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
      * internal buffer.
      *
      * @return true if there is more data, false if not.
+     * @throws IOException An IO error occurred
      */
     protected boolean refillReadBuffer() throws IOException {
         // If the server returns an empty packet, assume that that end of
@@ -820,7 +873,7 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
         }
 
         // Decode extra attributes
-        boolean secret = false;
+        boolean secretPresentInRequest = false;
         byte attributeCode;
         while ((attributeCode = requestHeaderMessage.getByte())
                 != Constants.SC_A_ARE_DONE) {
@@ -849,8 +902,28 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
                     }
                 } else if(n.equals(Constants.SC_A_SSL_PROTOCOL)) {
                     request.setAttribute(SSLSupport.PROTOCOL_VERSION_KEY, v);
+                } else if (n.equals("JK_LB_ACTIVATION")) {
+                    request.setAttribute(n, v);
+                } else if (javaxAttributes.contains(n)) {
+                    request.setAttribute(n, v);
+                } else if (iisTlsAttributes.contains(n)) {
+                    // Allow IIS TLS attributes
+                    request.setAttribute(n, v);
                 } else {
-                    request.setAttribute(n, v );
+                    // All 'known' attributes will be processed by the previous
+                    // blocks. Any remaining attribute is an 'arbitrary' one.
+                    if (allowedRequestAttributesPatternPattern == null) {
+                        response.setStatus(403);
+                        setErrorState(ErrorState.CLOSE_CLEAN, null);
+                    } else {
+                        Matcher m = allowedRequestAttributesPatternPattern.matcher(n);
+                        if (m.matches()) {
+                            request.setAttribute(n, v);
+                        } else {
+                            response.setStatus(403);
+                            setErrorState(ErrorState.CLOSE_CLEAN, null);
+                        }
+                    }
                 }
                 break;
 
@@ -923,9 +996,9 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
 
             case Constants.SC_A_SECRET:
                 requestHeaderMessage.getBytes(tmpMB);
-                if (requiredSecret != null) {
-                    secret = true;
-                    if (!tmpMB.equals(requiredSecret)) {
+                if (secret != null && secret.length() > 0) {
+                    secretPresentInRequest = true;
+                    if (!tmpMB.equals(secret)) {
                         response.setStatus(403);
                         setErrorState(ErrorState.CLOSE_CLEAN, null);
                     }
@@ -941,7 +1014,7 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
         }
 
         // Check if secret was submitted if required
-        if ((requiredSecret != null) && !secret) {
+        if (secret != null && secret.length() > 0 && !secretPresentInRequest) {
             response.setStatus(403);
             setErrorState(ErrorState.CLOSE_CLEAN, null);
         }
@@ -1015,6 +1088,7 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
     /**
      * When committing the response, we have to validate the set of headers, as
      * well as setup the response filters.
+     * @throws IOException An IO error occurred
      */
     protected void prepareResponse() throws IOException {
 
@@ -1098,6 +1172,11 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
 
     /**
      * Callback to write data from the buffer.
+     *
+     * @param explicit  If {@code true} a flush message is sent, otherwise this
+     *                  method is a NO-OP
+     *
+     * @throws IOException An IO error occurred
      */
     protected void flush(boolean explicit) throws IOException {
         if (ajpFlush && explicit && !finished) {
@@ -1109,6 +1188,7 @@ public abstract class AbstractAjpProcessor<S> extends AbstractProcessor<S> {
 
     /**
      * Finish AJP response.
+     * @throws IOException An IO error occurred
      */
     protected void finish() throws IOException {
 

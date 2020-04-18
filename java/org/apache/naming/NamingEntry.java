@@ -5,17 +5,15 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
-
-
+ */
 package org.apache.naming;
 
 
@@ -24,21 +22,12 @@ package org.apache.naming;
  *
  * @author Remy Maucherat
  */
-
 public class NamingEntry {
-
-
-    // -------------------------------------------------------------- Constants
-
 
     public static final int ENTRY = 0;
     public static final int LINK_REF = 1;
     public static final int REFERENCE = 2;
-    
     public static final int CONTEXT = 10;
-
-
-    // ----------------------------------------------------------- Constructors
 
 
     public NamingEntry(String name, Object value, int type) {
@@ -48,9 +37,6 @@ public class NamingEntry {
     }
 
 
-    // ----------------------------------------------------- Instance Variables
-
-
     /**
      * The type instance variable is used to avoid using RTTI when doing
      * lookups.
@@ -58,9 +44,6 @@ public class NamingEntry {
     public int type;
     public String name;
     public Object value;
-
-
-    // --------------------------------------------------------- Object Methods
 
 
     @Override
@@ -77,6 +60,4 @@ public class NamingEntry {
     public int hashCode() {
         return name.hashCode();
     }
-
-
 }

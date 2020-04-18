@@ -16,19 +16,28 @@
  */
 package org.apache.coyote.ajp;
 
+import java.util.regex.Pattern;
+
 import org.apache.coyote.AbstractProtocol;
 import org.apache.coyote.Processor;
 import org.apache.coyote.http11.upgrade.servlet31.HttpUpgradeHandler;
 import org.apache.tomcat.util.net.SocketWrapper;
 import org.apache.tomcat.util.res.StringManager;
 
+/**
+ * The is the base implementation for the AJP protocol handlers. Implementations
+ * typically extend this base class rather than implement {@link
+ * org.apache.coyote.ProtocolHandler}. All of the implementations that ship with
+ * Tomcat are implemented this way.
+ *
+ * @param <S> The type of socket used by the implementation
+ */
 public abstract class AbstractAjpProtocol<S> extends AbstractProtocol<S> {
-    
+
     /**
      * The string manager for this package.
      */
-    protected static final StringManager sm =
-        StringManager.getManager(Constants.Package);
+    protected static final StringManager sm = StringManager.getManager(AbstractAjpProtocol.class);
 
 
     @Override
@@ -40,53 +49,109 @@ public abstract class AbstractAjpProtocol<S> extends AbstractProtocol<S> {
 
     // ------------------------------------------------- AJP specific properties
     // ------------------------------------------ managed in the ProtocolHandler
-    
-    /**
-     * Send AJP flush packet when flushing.
-     * An flush packet is a zero byte AJP13 SEND_BODY_CHUNK
-     * packet. mod_jk and mod_proxy_ajp interprete this as
-     * a request to flush data to the client.
-     * AJP always does flush at the and of the response, so if
-     * it is not important, that the packets get streamed up to
-     * the client, do not use extra flush packets.
-     * For compatibility and to stay on the safe side, flush
-     * packets are enabled by default.
-     */
+
     protected boolean ajpFlush = true;
     public boolean getAjpFlush() { return ajpFlush; }
+    /**
+     * Configure whether to aend an AJP flush packet when flushing. A flush
+     * packet is a zero byte AJP13 SEND_BODY_CHUNK packet. mod_jk and
+     * mod_proxy_ajp interpret this as a request to flush data to the client.
+     * AJP always does flush at the and of the response, so if it is not
+     * important, that the packets get streamed up to the client, do not use
+     * extra flush packets. For compatibility and to stay on the safe side,
+     * flush packets are enabled by default.
+     *
+     * @param ajpFlush  The new flush setting
+     */
     public void setAjpFlush(boolean ajpFlush) {
         this.ajpFlush = ajpFlush;
     }
 
 
+    protected boolean tomcatAuthentication = true;
     /**
      * Should authentication be done in the native web server layer,
      * or in the Servlet container ?
+     *
+     * @return {@code true} if authentication should be performed by Tomcat,
+     *         otherwise {@code false}
      */
-    protected boolean tomcatAuthentication = true;
     public boolean getTomcatAuthentication() { return tomcatAuthentication; }
     public void setTomcatAuthentication(boolean tomcatAuthentication) {
         this.tomcatAuthentication = tomcatAuthentication;
     }
 
 
+    private boolean tomcatAuthorization = false;
     /**
      * Should authentication be done in the native web server layer and
      * authorization in the Servlet container?
+     *
+     * @return {@code true} if authorization should be performed by Tomcat,
+     *         otherwise {@code false}
      */
-    private boolean tomcatAuthorization = false;
     public boolean getTomcatAuthorization() { return tomcatAuthorization; }
     public void setTomcatAuthorization(boolean tomcatAuthorization) {
         this.tomcatAuthorization = tomcatAuthorization;
     }
 
 
-    /**
-     * Required secret.
-     */
     protected String requiredSecret = null;
+    private String secret = null;
+    /**
+     * Set the secret that must be included with every request.
+     *
+     * @param secret The required secret
+     */
+    public void setSecret(String secret) {
+        this.secret = secret;
+        this.requiredSecret = secret;
+    }
+    protected String getSecret() {
+        return secret;
+    }
+    /**
+     * Set the required secret that must be included with every request.
+     *
+     * @param requiredSecret The required secret
+     *
+     * @deprecated Replaced by {@link #setSecret(String)}.
+     *             Will be removed in Tomcat 11 onwards
+     */
+    @Deprecated
     public void setRequiredSecret(String requiredSecret) {
-        this.requiredSecret = requiredSecret;
+        setSecret(requiredSecret);
+    }
+    /**
+     * @return The current secret
+     *
+     * @deprecated Replaced by {@link #getSecret()}.
+     *             Will be removed in Tomcat 11 onwards
+     */
+    @Deprecated
+    protected String getRequiredSecret() {
+        return getSecret();
+    }
+
+
+    private boolean secretRequired = true;
+    public void setSecretRequired(boolean secretRequired) {
+        this.secretRequired = secretRequired;
+    }
+    public boolean getSecretRequired() {
+        return secretRequired;
+    }
+
+
+    private Pattern allowedRequestAttributesPatternPattern;
+    public void setAllowedRequestAttributesPattern(String allowedRequestAttributesPattern) {
+        this.allowedRequestAttributesPatternPattern = Pattern.compile(allowedRequestAttributesPattern);
+    }
+    public String getAllowedRequestAttributesPattern() {
+        return allowedRequestAttributesPatternPattern.pattern();
+    }
+    protected Pattern getAllowedRequestAttributesPatternPattern() {
+        return allowedRequestAttributesPatternPattern;
     }
 
 
@@ -128,12 +193,24 @@ public abstract class AbstractAjpProtocol<S> extends AbstractProtocol<S> {
             // TODO should fail - throw IOE
             return null;
         }
-        
+
         @Override
         protected P createUpgradeProcessor(SocketWrapper<S> socket,
                 HttpUpgradeHandler httpUpgradeHandler) {
             // TODO should fail - throw IOE
             return null;
         }
+    }
+
+
+    @Override
+    public void start() throws Exception {
+        if (getSecretRequired()) {
+            String secret = getSecret();
+            if (secret == null || secret.length() == 0) {
+                throw new IllegalArgumentException(sm.getString("ajpprotocol.noSecret"));
+            }
+        }
+        super.start();
     }
 }

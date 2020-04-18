@@ -82,8 +82,13 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
     /**
      * Update the current error state to the new error state if the new error
      * state is more severe than the current error state.
+     * @param errorState The error status details
+     * @param t The error which occurred
      */
     protected void setErrorState(ErrorState errorState, Throwable t) {
+        // Use the return value to avoid processing more than one async error
+        // in a single async cycle.
+        boolean setError = response.setError();
         boolean blockIo = this.errorState.isIoAllowed() && !errorState.isIoAllowed();
         this.errorState = this.errorState.getMostSevere(errorState);
         // Don't change the status code for IOException since that is almost
@@ -95,17 +100,10 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
         if (t != null) {
             request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, t);
         }
-        if (blockIo && !ContainerThreadMarker.isContainerThread() && isAsync()) {
-            // The error occurred on a non-container thread during async
-            // processing which means not all of the necessary clean-up will
-            // have been completed. Dispatch to a container thread to do the
-            // clean-up. Need to do it this way to ensure that all the necessary
-            // clean-up is performed.
-            asyncStateMachine.asyncMustError();
-            if (getLog().isDebugEnabled()) {
-                getLog().debug(sm.getString("abstractProcessor.nonContainerThreadError"), t);
+        if (blockIo && isAsync() && setError) {
+            if (asyncStateMachine.asyncError()) {
+                getEndpoint().processSocketAsync(socketWrapper, SocketStatus.ERROR);
             }
-            getEndpoint().processSocketAsync(socketWrapper, SocketStatus.ERROR);
         }
     }
 
@@ -120,7 +118,8 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
     }
 
     /**
-     * The endpoint receiving connections that are handled by this processor.
+     * @return The endpoint receiving connections that are handled by this
+     *         processor.
      */
     protected AbstractEndpoint<S> getEndpoint() {
         return endpoint;
@@ -158,6 +157,7 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
 
     /**
      * Set the socket wrapper being used.
+     * @param socketWrapper The socket wrapper
      */
     protected final void setSocketWrapper(SocketWrapper<S> socketWrapper) {
         this.socketWrapper = socketWrapper;
@@ -165,7 +165,7 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
 
 
     /**
-     * Get the socket wrapper being used.
+     * @return the socket wrapper being used.
      */
     protected final SocketWrapper<S> getSocketWrapper() {
         return socketWrapper;
@@ -173,7 +173,7 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
 
 
     /**
-     * Obtain the Executor used by the underlying endpoint.
+     * @return the Executor used by the underlying endpoint.
      */
     @Override
     public Executor getExecutor() {
@@ -191,6 +191,7 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
     public SocketState asyncPostProcess() {
         return asyncStateMachine.asyncPostProcess();
     }
+
 
     @Override
     public void errorDispatch() {
@@ -350,5 +351,4 @@ public abstract class AbstractProcessor<S> implements ActionHook, Processor<S> {
     public final AsyncStateMachine<S> getAsyncStateMachine() {
         return asyncStateMachine;
     }
-
 }

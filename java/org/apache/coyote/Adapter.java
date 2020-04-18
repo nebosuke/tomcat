@@ -27,8 +27,11 @@ import org.apache.tomcat.util.net.SocketStatus;
  */
 public interface Adapter {
 
-    /** 
+    /**
      * Call the service method, and notify all listeners
+     *
+     * @param req The request object
+     * @param res The response object
      *
      * @exception Exception if an error happens during handling of
      *   the request. Common errors are:
@@ -47,7 +50,7 @@ public interface Adapter {
 
     public boolean event(Request req, Response res, SocketStatus status)
             throws Exception;
-    
+
     public boolean asyncDispatch(Request req,Response res, SocketStatus status)
             throws Exception;
 
@@ -71,7 +74,7 @@ public interface Adapter {
     /**
      * Provide the name of the domain to use to register MBeans for components
      * associated with the connector.
-     * 
+     *
      * @return  The MBean domain name
      */
     public String getDomain();

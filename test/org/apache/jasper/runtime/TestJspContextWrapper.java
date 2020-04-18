@@ -34,7 +34,7 @@ public class TestJspContextWrapper extends TomcatBaseTest {
     public void testELTagFilePageContext() throws Exception {
         Tomcat tomcat = getTomcatInstance();
 
-        File appDir = new File("test/webapp-3.0");
+        File appDir = new File("test/webapp");
         // app dir is relative to server home
         StandardContext ctxt = (StandardContext) tomcat.addWebapp(
                 null, "/test", appDir.getAbsolutePath());
@@ -44,7 +44,7 @@ public class TestJspContextWrapper extends TomcatBaseTest {
         ctxt.setAliases("/WEB-INF/lib=" + lib.getCanonicalPath());
 
         tomcat.start();
-        
+
         ByteChunk out = new ByteChunk();
 
         int rc = getUrl("http://localhost:" + getPort() + "/test/bug5nnnn/bug58178.jsp", out, null);

@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,7 +37,7 @@ public interface TagPluginContext {
     boolean isAttributeSpecified(String attribute);
 
     /**
-     * @return An unique temporary variable name that the plugin can use.
+     * @return A unique temporary variable name that the plugin can use.
      */
     String getTemporaryVariableName();
 
@@ -50,27 +50,30 @@ public interface TagPluginContext {
     /**
      * Generate a declaration in the of the generated class.  This can be
      * used to declare an inner class, a method, or a class variable.
-     * @param id An unique ID identifying the declaration.  It is not
+     * @param id A unique ID identifying the declaration.  It is not
      *           part of the declaration, and is used to ensure that the
      *           declaration will only appear once.  If this method is
      *           invoked with the same id more than once in the translation
      *           unit, only the first declaration will be taken.
      * @param text The text of the declaration.
-     **/
+     */
     void generateDeclaration(String id, String text);
 
     /**
-     * Generate Java source codes
+     * Generate Java source code scriptlet
+     * @param s the scriptlet (raw Java source)
      */
     void generateJavaSource(String s);
 
     /**
+     * @param attribute The attribute name
      * @return true if the attribute is specified and its value is a
      *         translation-time constant.
      */
     boolean isConstantAttribute(String attribute);
 
     /**
+     * @param attribute The attribute name
      * @return A string that is the value of a constant attribute.  Undefined
      *         if the attribute is not a (translation-time) constant.
      *         null if the attribute is not specified.
@@ -112,17 +115,22 @@ public interface TagPluginContext {
     /**
      * Associate the attribute with a value in the current tagplugin context.
      * The plugin attributes can be used for communication among tags that
-     * must work together as a group.  See <c:when> for an example.
+     * must work together as a group.  See &lt;c:when&gt; for an example.
+     * @param attr The attribute name
+     * @param value The attribute value
      */
     void setPluginAttribute(String attr, Object value);
 
     /**
      * Get the value of an attribute in the current tagplugin context.
+     * @param attr The attribute name
+     * @return the attribute value
      */
     Object getPluginAttribute(String attr);
 
     /**
      * Is the tag being used inside a tag file?
+     * @return <code>true</code> if inside a tag file
      */
     boolean isTagFile();
 }

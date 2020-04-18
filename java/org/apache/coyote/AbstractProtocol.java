@@ -101,6 +101,12 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
      * more specific setter. That means the property belongs to the Endpoint,
      * the ServerSocketFactory or some other lower level component. This method
      * ensures that it is visible to both.
+     *
+     * @param name  The name of the property to set
+     * @param value The value, in string form, to set for the property
+     *
+     * @return <code>true</code> if the property was set successfully, otherwise
+     *         <code>false</code>
      */
     public boolean setProperty(String name, String value) {
         return endpoint.setProperty(name, value);
@@ -110,6 +116,10 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
     /**
      * Generic property getter used by the digester. Other code should not need
      * to use this.
+     *
+     * @param name The name of the property to get
+     *
+     * @return The value of the property converted to a string
      */
     public String getProperty(String name) {
         return endpoint.getProperty(name);
@@ -286,8 +296,10 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
 
     /**
      * The name will be prefix-address-port if address is non-null and
-     * prefix-port if the address is null. The name will be appropriately quoted
-     * so it can be used directly in an ObjectName.
+     * prefix-port if the address is null.
+     *
+     * @return A name for this protocol instance that is appropriately quoted
+     *         for use in an ObjectName.
      */
     public String getName() {
         StringBuilder name = new StringBuilder(getNamePrefix());
@@ -318,6 +330,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
     /**
      * Concrete implementations need to provide access to their logger to be
      * used by the abstract classes.
+     * @return the logger
      */
     protected abstract Log getLog();
 
@@ -325,18 +338,21 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
     /**
      * Obtain the prefix to be used when construction a name for this protocol
      * handler. The name will be prefix-address-port.
+     * @return the prefix
      */
     protected abstract String getNamePrefix();
 
 
     /**
      * Obtain the name of the protocol, (Http, Ajp, etc.). Used with JMX.
+     * @return the protocol name
      */
     protected abstract String getProtocolName();
 
 
     /**
      * Obtain the handler associated with the underlying Endpoint
+     * @return the handler
      */
     protected abstract Handler getHandler();
 
@@ -415,16 +431,15 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
 
     @Override
     public void init() throws Exception {
-        if (getLog().isInfoEnabled())
-            getLog().info(sm.getString("abstractProtocolHandler.init",
-                    getName()));
+        if (getLog().isInfoEnabled()) {
+            getLog().info(sm.getString("abstractProtocolHandler.init", getName()));
+        }
 
         if (oname == null) {
             // Component not pre-registered so register it
             oname = createObjectName();
             if (oname != null) {
-                Registry.getRegistry(null, null).registerComponent(this, oname,
-                    null);
+                Registry.getRegistry(null, null).registerComponent(this, oname, null);
             }
         }
 
@@ -487,6 +502,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
         }
     }
 
+
     @Override
     public void resume() throws Exception {
         if(getLog().isInfoEnabled())
@@ -523,6 +539,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
             getLog().info(sm.getString("abstractProtocolHandler.destroy",
                     getName()));
         }
+
         try {
             endpoint.destroy();
         } catch (Exception e) {
@@ -637,7 +654,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                         state = processor.process(wrapper);
                     }
 
-                    if (state != SocketState.CLOSED && processor.isAsync()) {
+                    if (processor.isAsync()) {
                         state = processor.asyncPostProcess();
                     }
 
@@ -710,10 +727,12 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                     }
                 } else {
                     // Connection closed. OK to recycle the processor. Upgrade
-                    // processors are not recycled.
+                    // processors are not re-used but recycle is called to clear
+                    // references.
                     connections.remove(socket);
                     if (processor.isUpgrade()) {
                         processor.getHttpUpgradeHandler().destroy();
+                        processor.recycle(true);
                     } else if (processor instanceof org.apache.coyote.http11.upgrade.UpgradeProcessor) {
                         // NO-OP
                     } else {
@@ -733,7 +752,13 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
             // Future developers: if you discover any other
             // rare-but-nonfatal exceptions, catch them here, and log as
             // above.
-            catch (Throwable e) {
+            catch (OutOfMemoryError oome) {
+                // Try and handle this here to give Tomcat a chance to close the
+                // connection and prevent clients waiting until they time out.
+                // Worst case, it isn't recoverable and the attempt at logging
+                // will trigger another OOME.
+                getLog().error(sm.getString("abstractConnectionHandler.oome"), oome);
+            } catch (Throwable e) {
                 ExceptionUtils.handleThrowable(e);
                 // any other exception or error is odd. Here we log it
                 // with "ERROR" level, so it will show up even on
@@ -774,7 +799,16 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
         protected abstract void release(SocketWrapper<S> socket,
                 Processor<S> processor, boolean socketClosing,
                 boolean addToPoller);
+
         /**
+         * Create an instance of an HTTP upgrade processor.
+         *
+         * @param socket    The socket associated with the connection to upgrade
+         * @param inbound   Listener to which data available events should be
+         *                  passed
+         * @return  A Processor instance for the upgraded connection
+         * @throws IOException if an I/O error occurred during the creation of
+         *                     the Processor
          * @deprecated  Will be removed in Tomcat 8.0.x.
          */
         @Deprecated
@@ -800,7 +834,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                                 ",name=" + getProtocol().getProtocolName() +
                                 "Request" + count);
                         if (getLog().isDebugEnabled()) {
-                            getLog().debug("Register " + rpName);
+                            getLog().debug("Register [" + processor + "] as [" + rpName + "]");
                         }
                         Registry.getRegistry(null, null).registerComponent(rp,
                                 rpName, null);

@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,20 +22,20 @@ import javax.management.ObjectName;
 import org.apache.tools.ant.BuildException;
 
 /**
- * unregister a MBean at <em>JMX</em> JSR 160 MBeans Server. 
+ * unregister an MBean at <em>JMX</em> JSR 160 MBeans Server.
  * <ul>
  * <li>unregister Mbeans</li>
  * </ul>
  * <p>
  * Examples:
- * <br/>
- * unregister an existing Mbean at jmx.server connection 
+ * <br>
+ * unregister an existing Mbean at jmx.server connection
+ * </p>
  * <pre>
  *   &lt;jmx:unregister
  *           ref="jmx.server"
  *           name="Catalina:type=MBeanFactory" /&gt;
  * </pre>
- * </p>
  * <p>
  * <b>WARNING</b>Not all Tomcat MBeans can successfully unregister remotely. The mbean
  * unregistration don't remove valves, realm, .. from parent class.
@@ -71,15 +71,7 @@ public class JMXAccessorUnregisterTask extends JMXAccessorTask {
 
     }
     // ------------------------------------------------------ protected Methods
-    
-    /**
-     * Execute the specified command, based on the configured properties. The
-     * input stream will be closed upon completion of this task, whether it was
-     * executed successfully or not.
-     * 
-     * @exception Exception
-     *                if an error occurs
-     */
+
     @Override
     public String jmxExecute(MBeanServerConnection jmxServerConnection)
         throws Exception {
@@ -92,11 +84,12 @@ public class JMXAccessorUnregisterTask extends JMXAccessorTask {
 
 
     /**
-     * Unregister Mbean
-     * @param jmxServerConnection
-     * @param name
-     * @return The value of the given named attribute
-     * @throws Exception
+     * Unregister MBean.
+     *
+     * @param jmxServerConnection Connection to the JMX server
+     * @param name The MBean name
+     * @return null (no error message to report other than exception)
+     * @throws Exception An error occurred
      */
     protected String jmxUuregister(MBeanServerConnection jmxServerConnection,String name) throws Exception {
         String error = null;

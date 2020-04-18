@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,23 +19,30 @@ package org.apache.jasper.compiler;
 import java.io.PrintWriter;
 
 /**
- * This is what is used to generate servlets. 
+ * This is what is used to generate servlets.
  *
  * @author Anil K. Vijendran
  * @author Kin-man Chung
  */
 public class ServletWriter {
+
     public static final int TAB_WIDTH = 2;
     public static final String SPACES = "                              ";
 
-    // Current indent level:
+    /**
+     * Current indent level.
+     */
     private int indent = 0;
     private int virtual_indent = 0;
 
-    // The sink writer:
+    /**
+     * The sink writer.
+     */
     PrintWriter writer;
-    
-    // servlet line numbers start from 1
+
+    /**
+     * Servlet line numbers start from 1.
+     */
     private int javaLine = 1;
 
 
@@ -47,7 +54,7 @@ public class ServletWriter {
         writer.close();
     }
 
-    
+
     // -------------------- Access informations --------------------
 
     public int getJavaLine() {
@@ -71,6 +78,7 @@ public class ServletWriter {
 
     /**
      * Prints the given string followed by '\n'
+     * @param s The string
      */
     public void println(String s) {
         javaLine++;
@@ -94,6 +102,7 @@ public class ServletWriter {
 
     /**
      * Prints the current indention, followed by the given string
+     * @param s The string
      */
     public void printin(String s) {
         writer.print(SPACES.substring(0, indent));
@@ -102,6 +111,7 @@ public class ServletWriter {
 
     /**
      * Prints the current indention, and then the string, and a '\n'.
+     * @param s The string
      */
     public void printil(String s) {
         javaLine++;
@@ -113,6 +123,7 @@ public class ServletWriter {
      * Prints the given char.
      *
      * Use println() to print a '\n'.
+     * @param c The char
      */
     public void print(char c) {
         writer.print(c);
@@ -120,6 +131,7 @@ public class ServletWriter {
 
     /**
      * Prints the given int.
+     * @param i The int
      */
     public void print(int i) {
         writer.print(i);
@@ -130,6 +142,7 @@ public class ServletWriter {
      *
      * The string must not contain any '\n', otherwise the line count will be
      * off.
+     * @param s The string
      */
     public void print(String s) {
         writer.print(s);
@@ -140,6 +153,7 @@ public class ServletWriter {
      *
      * If the string spans multiple lines, the line count will be adjusted
      * accordingly.
+     * @param s The string
      */
     public void printMultiLn(String s) {
         int index = 0;

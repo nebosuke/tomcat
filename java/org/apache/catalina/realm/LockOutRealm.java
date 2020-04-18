@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,6 +27,7 @@ import org.apache.catalina.LifecycleException;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSName;
 
@@ -56,10 +57,10 @@ public class LockOutRealm extends CombinedRealm {
      * locked out. Defaults to 5.
      */
     protected int failureCount = 5;
-    
+
     /**
      * The time (in seconds) a user is locked out for after too many
-     * authentication failures. Defaults to 300 (5 minutes). 
+     * authentication failures. Defaults to 300 (5 minutes).
      */
     protected int lockOutTime = 300;
 
@@ -93,7 +94,7 @@ public class LockOutRealm extends CombinedRealm {
      *  that prevents this component from being used
      */
     @Override
-    protected void startInternal() throws LifecycleException {
+    protected synchronized void startInternal() throws LifecycleException {
         // Configure the list of failed users to delete the oldest entry once it
         // exceeds the specified size
         failedUsers = new LinkedHashMap<String, LockRecord>(cacheSize, 0.75f,
@@ -106,7 +107,7 @@ public class LockOutRealm extends CombinedRealm {
                     // Check to see if this element has been removed too quickly
                     long timeInCache = (System.currentTimeMillis() -
                             eldest.getValue().getLastFailureTime())/1000;
-                    
+
                     if (timeInCache < cacheRemovalWarningTime) {
                         log.warn(sm.getString("lockOutRealm.removeWarning",
                                 eldest.getKey(), Long.valueOf(timeInCache)));
@@ -193,16 +194,28 @@ public class LockOutRealm extends CombinedRealm {
                 log.warn(sm.getString("realmBase.gssNameFail"), e);
                 return null;
             }
-            
+
             username = name.toString();
-            
+
             Principal authenticatedUser = super.authenticate(gssContext, storeCreds);
-                
+
             return filterLockedAccounts(username, authenticatedUser);
         }
-        
+
         // Fail in all other cases
         return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Principal authenticate(GSSName gssName, GSSCredential gssCredential) {
+        String username = gssName.toString();
+
+        Principal authenticatedUser = super.authenticate(gssName, gssCredential);
+
+        return filterLockedAccounts(username, authenticatedUser);
     }
 
 
@@ -233,14 +246,14 @@ public class LockOutRealm extends CombinedRealm {
     /**
      * Unlock the specified username. This will remove all records of
      * authentication failures for this user.
-     * 
+     *
      * @param username The user to unlock
      */
     public void unlock(String username) {
-        // Auth success clears the lock record so... 
+        // Auth success clears the lock record so...
         registerAuthSuccess(username);
     }
-    
+
     /*
      * Checks to see if the current user is locked. If this is associated with
      * a login attempt, then the last access time will be recorded and any
@@ -251,19 +264,19 @@ public class LockOutRealm extends CombinedRealm {
         synchronized (this) {
             lockRecord = failedUsers.get(username);
         }
-        
+
         // No lock record means user can't be locked
         if (lockRecord == null) {
             return false;
         }
-        
+
         // Check to see if user is locked
         if (lockRecord.getFailures() >= failureCount &&
                 (System.currentTimeMillis() -
                         lockRecord.getLastFailureTime())/1000 < lockOutTime) {
             return true;
         }
-        
+
         // User has not, yet, exceeded lock thresholds
         return false;
     }
@@ -281,13 +294,13 @@ public class LockOutRealm extends CombinedRealm {
 
     /*
      * After a failed authentication, add the record of the failed
-     * authentication. 
+     * authentication.
      */
     private void registerAuthFailure(String username) {
         LockRecord lockRecord = null;
         synchronized (this) {
             if (!failedUsers.containsKey(username)) {
-                lockRecord = new LockRecord(); 
+                lockRecord = new LockRecord();
                 failedUsers.put(username, lockRecord);
             } else {
                 lockRecord = failedUsers.get(username);
@@ -304,7 +317,7 @@ public class LockOutRealm extends CombinedRealm {
         lockRecord.registerFailure();
     }
 
-    
+
     /**
      * Get the number of failed authentication attempts required to lock the
      * user account.
@@ -394,11 +407,11 @@ public class LockOutRealm extends CombinedRealm {
     protected static class LockRecord {
         private AtomicInteger failures = new AtomicInteger(0);
         private long lastFailureTime = 0;
-        
+
         public int getFailures() {
             return failures.get();
         }
-        
+
         public void setFailures(int theFailures) {
             failures.set(theFailures);
         }
@@ -406,7 +419,7 @@ public class LockOutRealm extends CombinedRealm {
         public long getLastFailureTime() {
             return lastFailureTime;
         }
-        
+
         public void registerFailure() {
             failures.incrementAndGet();
             lastFailureTime = System.currentTimeMillis();

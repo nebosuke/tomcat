@@ -14,14 +14,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.tomcat.jni;
 
 /** SSL
  *
  * @author Mladen Turk
  */
-
 public final class SSL {
 
     /*
@@ -132,7 +130,7 @@ public final class SSL {
     /* Set on servers to choose the cipher according to the server's
      * preferences */
     public static final int SSL_OP_CIPHER_SERVER_PREFERENCE         = 0x00400000;
-    /* If set, a server will allow a client to issue a SSLv3.0 version number
+    /* If set, a server will allow a client to issue an SSLv3.0 version number
      * as latest version supported in the premaster secret, even when TLSv1.0
      * (version 3.1) was announced in the client hello. Normally this is
      * forbidden to prevent version rollback attacks. */
@@ -277,6 +275,7 @@ public final class SSL {
      *        set, $HOME/.rnd otherwise.
      *        In case both files are unavailable builtin
      *        random seed generator is used.
+     * @return <code>true</code> if the operation was successful
      */
     public static native boolean randLoad(String filename);
 
@@ -285,6 +284,7 @@ public final class SSL {
      * file <code>filename</code> which can be used to initialize the PRNG
      * by calling randLoad in a later session.
      * @param filename Filename to save the data
+     * @return <code>true</code> if the operation was successful
      */
     public static native boolean randSave(String filename);
 
@@ -293,6 +293,7 @@ public final class SSL {
      * @param filename Filename to save the data
      * @param len The length of random sequence in bytes
      * @param base64 Output the data in Base64 encoded format
+     * @return <code>true</code> if the operation was successful
      */
     public static native boolean randMake(String filename, int len,
                                           boolean base64);
@@ -310,6 +311,7 @@ public final class SSL {
      * @param pool The pool to use.
      * @param callback BIOCallback to use
      * @return New BIO handle
+     * @throws Exception An error occurred
      */
      public static native long newBIO(long pool, BIOCallback callback)
             throws Exception;
@@ -374,6 +376,7 @@ public final class SSL {
 
     /**
      * Return last SSL error string
+     * @return the error string
      */
     public static native String getLastError();
 

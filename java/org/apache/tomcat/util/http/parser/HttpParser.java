@@ -505,6 +505,17 @@ public class HttpParser {
     }
 
 
+    public static boolean isControl(int c) {
+        // Fast for valid control characters, slower for some incorrect
+        // ones
+        try {
+            return IS_CONTROL[c];
+        } catch (ArrayIndexOutOfBoundsException ex) {
+            return false;
+        }
+    }
+
+
     // Skip any LWS and position to read the next character. The next character
     // is returned as being able to 'peek()' it allows a small optimisation in
     // some cases.
@@ -522,8 +533,7 @@ public class HttpParser {
         return c;
     }
 
-    static SkipResult skipConstant(Reader input, String constant)
-            throws IOException {
+    static SkipResult skipConstant(Reader input, String constant) throws IOException {
         int len = constant.length();
 
         skipLws(input);
@@ -742,6 +752,80 @@ public class HttpParser {
             return result.toString();
         }
     }
+
+    static double readWeight(Reader input, char delimiter) throws IOException {
+        skipLws(input);
+        int c = input.read();
+        if (c == -1 || c == delimiter) {
+            // No q value just whitespace
+            return 1;
+        } else if (c != 'q') {
+            // Malformed. Use quality of zero so it is dropped.
+            skipUntil(input, c, delimiter);
+            return 0;
+        }
+        // RFC 7231 does not allow whitespace here but be tolerant
+        skipLws(input);
+        c = input.read();
+        if (c != '=') {
+            // Malformed. Use quality of zero so it is dropped.
+            skipUntil(input, c, delimiter);
+            return 0;
+        }
+
+        // RFC 7231 does not allow whitespace here but be tolerant
+        skipLws(input);
+        c = input.read();
+
+        // Should be no more than 3 decimal places
+        StringBuilder value = new StringBuilder(5);
+        int decimalPlacesRead = -1;
+
+        if (c == '0' || c == '1') {
+            value.append((char) c);
+            c = input.read();
+
+            while (true) {
+                if (decimalPlacesRead == -1 && c == '.') {
+                    value.append('.');
+                    decimalPlacesRead = 0;
+                } else if (decimalPlacesRead > -1 && c >= '0' && c <= '9') {
+                    if (decimalPlacesRead < 3) {
+                        value.append((char) c);
+                        decimalPlacesRead++;
+                    }
+                } else {
+                    break;
+                }
+                c = input.read();
+            }
+        } else {
+            // Malformed. Use quality of zero so it is dropped and skip until
+            // EOF or the next delimiter
+            skipUntil(input, c, delimiter);
+            return 0;
+        }
+
+        if (c == 9 || c == 32) {
+            skipLws(input);
+            c = input.read();
+        }
+
+        // Must be at delimiter or EOF
+        if (c != delimiter && c != -1) {
+            // Malformed. Use quality of zero so it is dropped and skip until
+            // EOF or the next delimiter
+            skipUntil(input, c, delimiter);
+            return 0;
+        }
+
+        double result = Double.parseDouble(value.toString());
+        if (result > 1) {
+            return 0;
+        }
+        return result;
+    }
+
 
     static enum SkipResult {
         FOUND,
@@ -984,27 +1068,27 @@ public class HttpParser {
 
 
     private enum DomainParseState {
-        NEW(     true, false, false, false, " at the start of"),
-        ALPHA(   true,  true,  true,  true, " after a letter in"),
-        NUMERIC( true,  true,  true,  true, " after a number in"),
-        PERIOD(  true, false, false,  true, " after a period in"),
-        HYPHEN(  true,  true, false, false, " after a hypen in"),
-        COLON(  false, false, false, false, " after a colon in"),
-        END(    false, false, false, false, " at the end of");
+        NEW(     true, false, false, false, "http.invalidCharacterDomain.atStart"),
+        ALPHA(   true,  true,  true,  true, "http.invalidCharacterDomain.afterLetter"),
+        NUMERIC( true,  true,  true,  true, "http.invalidCharacterDomain.afterNumber"),
+        PERIOD(  true, false, false,  true, "http.invalidCharacterDomain.afterPeriod"),
+        HYPHEN(  true,  true, false, false, "http.invalidCharacterDomain.afterHyphen"),
+        COLON(  false, false, false, false, "http.invalidCharacterDomain.afterColon"),
+        END(    false, false, false, false, "http.invalidCharacterDomain.atEnd");
 
         private final boolean mayContinue;
         private final boolean allowsHyphen;
         private final boolean allowsPeriod;
         private final boolean allowsEnd;
-        private final String errorLocation;
+        private final String errorMsg;
 
         private DomainParseState(boolean mayContinue, boolean allowsHyphen, boolean allowsPeriod,
-                boolean allowsEnd, String errorLocation) {
+                boolean allowsEnd, String errorMsg) {
             this.mayContinue = mayContinue;
             this.allowsHyphen = allowsHyphen;
             this.allowsPeriod = allowsPeriod;
             this.allowsEnd = allowsEnd;
-            this.errorLocation = errorLocation;
+            this.errorMsg = errorMsg;
         }
 
         public boolean mayContinue() {
@@ -1012,7 +1096,14 @@ public class HttpParser {
         }
 
         public DomainParseState next(int c) {
-            if (HttpParser.isAlpha(c)) {
+            if (c == -1) {
+                if (allowsEnd) {
+                    return END;
+                } else {
+                    throw new IllegalArgumentException(
+                            sm.getString("http.invalidSegmentEndState", this.name()));
+                }
+            } else if (HttpParser.isAlpha(c)) {
                 return ALPHA;
             } else if (HttpParser.isNumeric(c)) {
                 return NUMERIC;
@@ -1020,29 +1111,22 @@ public class HttpParser {
                 if (allowsPeriod) {
                     return PERIOD;
                 } else {
-                    throw new IllegalArgumentException(sm.getString("http.invalidCharacterDomain",
-                            Character.toString((char) c), errorLocation));
+                    throw new IllegalArgumentException(sm.getString(errorMsg,
+                            Character.toString((char) c)));
                 }
             } else if (c == ':') {
                 if (allowsEnd) {
                     return COLON;
                 } else {
-                    throw new IllegalArgumentException(sm.getString("http.invalidCharacterDomain",
-                            Character.toString((char) c), errorLocation));
-                }
-            } else if (c == -1) {
-                if (allowsEnd) {
-                    return END;
-                } else {
-                    throw new IllegalArgumentException(
-                            sm.getString("http.invalidSegmentEndState", this.name()));
+                    throw new IllegalArgumentException(sm.getString(errorMsg,
+                            Character.toString((char) c)));
                 }
             } else if (c == '-') {
                 if (allowsHyphen) {
                     return HYPHEN;
                 } else {
-                    throw new IllegalArgumentException(sm.getString("http.invalidCharacterDomain",
-                            Character.toString((char) c), errorLocation));
+                    throw new IllegalArgumentException(sm.getString(errorMsg,
+                            Character.toString((char) c)));
                 }
             } else {
                 throw new IllegalArgumentException(sm.getString(

@@ -60,14 +60,21 @@ import org.apache.tomcat.util.buf.ByteChunk;
  * don't have to keep writing the cleanup code.
  */
 public abstract class TomcatBaseTest extends LoggingBaseTest {
-    private Tomcat tomcat;
-    private boolean accessLogEnabled = false;
+
+    // Used by parameterized tests. Defined here to reduce duplication.
+    protected static final Boolean[] booleans = new Boolean[] { Boolean.FALSE, Boolean.TRUE };
+
     protected static final int DEFAULT_CLIENT_TIMEOUT_MS = 300000;
 
     public static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
+    private Tomcat tomcat;
+    private boolean accessLogEnabled = false;
+
     /**
-     * Make Tomcat instance accessible to sub-classes.
+     * Make the Tomcat instance available to sub-classes.
+     *
+     * @return A Tomcat instance without any pre-configured web applications
      */
     public Tomcat getTomcatInstance() {
         return tomcat;
@@ -80,7 +87,7 @@ public abstract class TomcatBaseTest extends LoggingBaseTest {
         return tomcat.getConnector().getLocalPort();
     }
 
-    /**
+    /*
      * Sub-classes may want to check, whether an AccessLogValve is active
      */
     public boolean isAccessLogEnabled() {
@@ -407,11 +414,11 @@ public abstract class TomcatBaseTest extends LoggingBaseTest {
             StringBuilder value;
             Object attribute;
 
+            response.setContentType("text/plain");
+
             ServletContext ctx = this.getServletContext();
             HttpSession session = request.getSession(false);
             PrintWriter out = response.getWriter();
-
-            response.setContentType("text/plain");
 
             out.println("CONTEXT-NAME: " + ctx.getServletContextName());
             out.println("CONTEXT-PATH: " + ctx.getContextPath());
@@ -660,8 +667,13 @@ public abstract class TomcatBaseTest extends LoggingBaseTest {
         connection.connect();
         int rc = connection.getResponseCode();
         if (resHead != null) {
-            Map<String, List<String>> head = connection.getHeaderFields();
-            resHead.putAll(head);
+            // Skip the entry with null key that is used for the response line
+            // that some Map implementations may not accept.
+            for (Map.Entry<String, List<String>> entry : connection.getHeaderFields().entrySet()) {
+                if (entry.getKey() != null) {
+                    resHead.put(entry.getKey(), entry.getValue());
+                }
+            }
         }
         InputStream is;
         if (rc < 400) {

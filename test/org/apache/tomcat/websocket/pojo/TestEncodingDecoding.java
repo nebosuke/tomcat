@@ -168,7 +168,7 @@ public class TestEncodingDecoding extends TomcatBaseTest {
         i = testEvent(MsgByteDecoder.class.getName()+":destroy", i);
     }
 
-    
+
     @Test
     public void testGenericsCoders() throws Exception {
         // Set up utility classes
@@ -231,8 +231,7 @@ public class TestEncodingDecoding extends TomcatBaseTest {
     }
 
 
-    @ClientEndpoint(decoders={ListStringDecoder.class},
-            encoders={ListStringEncoder.class})
+    @ClientEndpoint(decoders=ListStringDecoder.class, encoders=ListStringEncoder.class)
     public static class GenericsClient {
         private Queue<Object> received = new ConcurrentLinkedQueue<Object>();
 
@@ -262,8 +261,8 @@ public class TestEncodingDecoding extends TomcatBaseTest {
 
 
     @ServerEndpoint(value=PATH_GENERICS_EP,
-            decoders={ListStringDecoder.class},
-            encoders={ListStringEncoder.class},
+            decoders=ListStringDecoder.class,
+            encoders=ListStringEncoder.class,
             configurator=SingletonConfigurator.class)
     public static class GenericsServer {
 

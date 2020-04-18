@@ -19,6 +19,7 @@ package org.apache.coyote;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.http.MimeHeaders;
@@ -32,7 +33,7 @@ import org.apache.tomcat.util.http.parser.MediaType;
  * @author Jason Hunter [jch@eng.sun.com]
  * @author James Todd [gonzo@eng.sun.com]
  * @author Harish Prabandham
- * @author Hans Bergsten <hans@gefionsoftware.com>
+ * @author Hans Bergsten [hans@gefionsoftware.com]
  * @author Remy Maucherat
  */
 public final class Response {
@@ -42,7 +43,7 @@ public final class Response {
     /**
      * Default locale as mandated by the spec.
      */
-    private static Locale DEFAULT_LOCALE = Locale.getDefault();
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
 
     // ----------------------------------------------------- Instance Variables
@@ -62,7 +63,7 @@ public final class Response {
     /**
      * Response headers.
      */
-    MimeHeaders headers = new MimeHeaders();
+    final MimeHeaders headers = new MimeHeaders();
 
 
     /**
@@ -74,19 +75,19 @@ public final class Response {
     /**
      * Notes.
      */
-    Object notes[] = new Object[Constants.MAX_NOTES];
+    final Object notes[] = new Object[Constants.MAX_NOTES];
 
 
     /**
      * Committed flag.
      */
-    private boolean committed = false;
+    private volatile boolean committed = false;
 
 
     /**
      * Action hook.
      */
-    public ActionHook hook;
+    public volatile ActionHook hook;
 
 
     /**
@@ -103,16 +104,48 @@ public final class Response {
     private long commitTime = -1;
 
     /**
+     * Has the charset been explicitly set.
+     */
+    boolean charsetSet = false;
+
+    /**
      * Holds request error exception.
      */
     Exception errorException = null;
 
     /**
-     * Has the charset been explicitly set.
+     * With the introduction of async processing and the possibility of
+     * non-container threads calling sendError() tracking the current error
+     * state and ensuring that the correct error page is called becomes more
+     * complicated. This state attribute helps by tracking the current error
+     * state and informing callers that attempt to change state if the change
+     * was successful or if another thread got there first.
+     *
+     * <pre>
+     * The state machine is very simple:
+     *
+     * 0 - NONE
+     * 1 - NOT_REPORTED
+     * 2 - REPORTED
+     *
+     *
+     *   -->---->-- >NONE
+     *   |   |        |
+     *   |   |        | setError()
+     *   ^   ^        |
+     *   |   |       \|/
+     *   |   |-<-NOT_REPORTED
+     *   |            |
+     *   ^            | report()
+     *   |            |
+     *   |           \|/
+     *   |----<----REPORTED
+     * </pre>
      */
-    boolean charsetSet = false;
+    private final AtomicInteger errorState = new AtomicInteger(0);
 
     Request req;
+
 
     // ------------------------------------------------------------- Properties
 
@@ -151,7 +184,6 @@ public final class Response {
 
     // -------------------- Per-Response "notes" --------------------
 
-
     public final void setNote(int pos, Object value) {
         notes[pos] = value;
     }
@@ -164,19 +196,18 @@ public final class Response {
 
     // -------------------- Actions --------------------
 
-
     public void action(ActionCode actionCode, Object param) {
         if (hook != null) {
-            if( param==null )
+            if (param == null) {
                 hook.action(actionCode, this);
-            else
+            } else {
                 hook.action(actionCode, param);
+            }
         }
     }
 
 
     // -------------------- State --------------------
-
 
     public int getStatus() {
         return status;
@@ -184,15 +215,19 @@ public final class Response {
 
 
     /**
-     * Set the response status
+     * Set the response status.
+     *
+     * @param status The status value to set
      */
-    public void setStatus( int status ) {
+    public void setStatus(int status) {
         this.status = status;
     }
 
 
     /**
      * Get the status message.
+     *
+     * @return The message associated with the current status
      */
     public String getMessage() {
         return message;
@@ -201,6 +236,8 @@ public final class Response {
 
     /**
      * Set the status message.
+     *
+     * @param message The status message to set
      */
     public void setMessage(String message) {
         this.message = message;
@@ -230,10 +267,10 @@ public final class Response {
 
     // -----------------Error State --------------------
 
-
     /**
-     * Set the error Exception that occurred during
-     * request processing.
+     * Set the error Exception that occurred during request processing.
+     *
+     * @param ex The exception that occurred
      */
     public void setErrorException(Exception ex) {
         errorException = ex;
@@ -241,8 +278,9 @@ public final class Response {
 
 
     /**
-     * Get the Exception that occurred during request
-     * processing.
+     * Get the Exception that occurred during request processing.
+     *
+     * @return The exception that occurred
      */
     public Exception getErrorException() {
         return errorException;
@@ -251,6 +289,36 @@ public final class Response {
 
     public boolean isExceptionPresent() {
         return ( errorException != null );
+    }
+
+
+    /**
+     * Set the error flag.
+     *
+     * @return <code>false</code> if the error flag was already set
+     */
+    public boolean setError() {
+        return errorState.compareAndSet(0, 1);
+    }
+
+
+    /**
+     * Error flag accessor.
+     *
+     * @return <code>true</code> if the response has encountered an error
+     */
+    public boolean isError() {
+        return errorState.get() > 0;
+    }
+
+
+    public boolean isErrorReportRequired() {
+        return errorState.get() == 1;
+    }
+
+
+    public boolean setErrorReported() {
+        return errorState.compareAndSet(1, 2);
     }
 
 
@@ -281,8 +349,14 @@ public final class Response {
 
     // -------------------- Headers --------------------
     /**
-     * Warning: This method always returns <code>false<code> for Content-Type
+     * Does the response contain the given header.
+     * <br>
+     * Warning: This method always returns <code>false</code> for Content-Type
      * and Content-Length.
+     *
+     * @param name The name of the header of interest
+     *
+     * @return {@code true} if the response contains the header.
      */
     public boolean containsHeader(String name) {
         return headers.getHeader(name) != null;
@@ -354,8 +428,10 @@ public final class Response {
     }
 
     /**
-     * Called explicitly by user to set the Content-Language and
-     * the default encoding
+     * Called explicitly by user to set the Content-Language and the default
+     * encoding.
+     *
+     * @param locale The locale to use for this response
      */
     public void setLocale(Locale locale) {
 
@@ -382,32 +458,41 @@ public final class Response {
 
     /**
      * Return the content language.
+     *
+     * @return The language code for the language currently associated with this
+     *         response
      */
     public String getContentLanguage() {
         return contentLanguage;
     }
 
-    /*
-     * Overrides the name of the character encoding used in the body
-     * of the response. This method must be called prior to writing output
-     * using getWriter().
+
+    /**
+     * Overrides the character encoding used in the body of the response. This
+     * method must be called prior to writing output using getWriter().
      *
-     * @param charset String containing the name of the character encoding.
+     * @param characterEncoding The name of character encoding.
      */
-    public void setCharacterEncoding(String charset) {
-
-        if (isCommitted())
+    public void setCharacterEncoding(String characterEncoding) {
+        if (isCommitted()) {
             return;
-        if (charset == null)
+        }
+        if (characterEncoding == null) {
             return;
+        }
 
-        characterEncoding = charset;
-        charsetSet=true;
+        this.characterEncoding = characterEncoding;
+        charsetSet = true;
     }
 
+
+    /**
+     * @return The name of the current encoding
+     */
     public String getCharacterEncoding() {
         return characterEncoding;
     }
+
 
     /**
      * Sets the content type.
@@ -459,9 +544,7 @@ public final class Response {
 
         String ret = contentType;
 
-        if (ret != null
-            && characterEncoding != null
-            && charsetSet) {
+        if (ret != null && characterEncoding != null && charsetSet) {
             ret = ret + ";charset=" + characterEncoding;
         }
 
@@ -489,12 +572,13 @@ public final class Response {
     /**
      * Write a chunk of bytes.
      */
-    public void doWrite(ByteChunk chunk/*byte buffer[], int pos, int count*/)
+    public void doWrite(ByteChunk chunk)
         throws IOException
     {
         outputBuffer.doWrite(chunk, this);
         contentWritten+=chunk.getLength();
     }
+
 
     // --------------------
 
@@ -511,6 +595,7 @@ public final class Response {
         committed = false;
         commitTime = -1;
         errorException = null;
+        errorState.set(0);
         headers.clear();
 
         // update counters
@@ -519,6 +604,10 @@ public final class Response {
 
     /**
      * Bytes written by application - i.e. before compression, chunking, etc.
+     *
+     * @return The total number of bytes written to the response by the
+     *         application. This will not be the number of bytes written to the
+     *         network which may be more or less than this value.
      */
     public long getContentWritten() {
         return contentWritten;
@@ -526,6 +615,12 @@ public final class Response {
 
     /**
      * Bytes written to socket - i.e. after compression, chunking, etc.
+     *
+     * @param flush Should any remaining bytes be flushed before returning the
+     *              total? If {@code false} bytes remaining in the buffer will
+     *              not be included in the returned value
+     *
+     * @return The total number of bytes written to the socket for this response
      */
     public long getBytesWritten(boolean flush) {
         if (flush) {

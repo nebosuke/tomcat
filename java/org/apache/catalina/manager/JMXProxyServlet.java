@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,9 @@ import java.io.PrintWriter;
 import java.util.Set;
 
 import javax.management.Attribute;
+import javax.management.InstanceNotFoundException;
 import javax.management.MBeanException;
+import javax.management.MBeanInfo;
 import javax.management.MBeanOperationInfo;
 import javax.management.MBeanParameterInfo;
 import javax.management.MBeanServer;
@@ -35,21 +37,24 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.catalina.mbeans.MBeanDumper;
+import org.apache.catalina.tribes.util.StringManager;
 import org.apache.tomcat.util.modeler.Registry;
 
 /**
- * This servlet will dump JMX attributes in a simple format
- * and implement proxy services for modeler.
+ * This servlet will dump JMX attributes in a simple format and implement proxy
+ * services for modeler.
  *
  * @author Costin Manolache
  */
-public class JMXProxyServlet extends HttpServlet  {
-    
+public class JMXProxyServlet extends HttpServlet {
+
     private static final long serialVersionUID = 1L;
 
     // Constant for "no parameters" when invoking a JMX operation
     // without any parameters.
     private static final String[] NO_PARAMETERS = new String[0];
+
+    private static final StringManager sm = StringManager.getManager(JMXProxyServlet.class);
 
     // ----------------------------------------------------- Instance Variables
     /**
@@ -57,6 +62,7 @@ public class JMXProxyServlet extends HttpServlet  {
      */
     protected transient MBeanServer mBeanServer = null;
     protected transient Registry registry;
+
 
     // --------------------------------------------------------- Public Methods
     /**
@@ -80,10 +86,8 @@ public class JMXProxyServlet extends HttpServlet  {
      * @exception ServletException if a servlet-specified error occurs
      */
     @Override
-    public void doGet(HttpServletRequest request,
-                      HttpServletResponse response)
-        throws IOException, ServletException
-    {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ServletException {
         response.setContentType("text/plain");
         // Stop older versions of IE thinking they know best. We set text/plain
         // in the line above for a reason. IE's behaviour is unwanted at best
@@ -91,47 +95,48 @@ public class JMXProxyServlet extends HttpServlet  {
         response.setHeader("X-Content-Type-Options", "nosniff");
         PrintWriter writer = response.getWriter();
 
-        if( mBeanServer==null ) {
+        if (mBeanServer == null) {
             writer.println("Error - No mbean server");
             return;
         }
 
-        String qry=request.getParameter("set");
-        if( qry!= null ) {
-            String name=request.getParameter("att");
-            String val=request.getParameter("val");
+        String qry = request.getParameter("set");
+        if (qry != null) {
+            String name = request.getParameter("att");
+            String val = request.getParameter("val");
 
-            setAttribute( writer, qry, name, val );
+            setAttribute(writer, qry, name, val);
             return;
         }
-        qry=request.getParameter("get");
-        if( qry!= null ) {
-            String name=request.getParameter("att");
-            getAttribute( writer, qry, name, request.getParameter("key") );
+        qry = request.getParameter("get");
+        if (qry != null) {
+            String name = request.getParameter("att");
+            getAttribute(writer, qry, name, request.getParameter("key"));
             return;
-        }        
+        }
         qry = request.getParameter("invoke");
-        if(qry != null) {
-            String opName=request.getParameter("op");
+        if (qry != null) {
+            String opName = request.getParameter("op");
             String[] params = getInvokeParameters(request.getParameter("ps"));
             invokeOperation(writer, qry, opName, params);
             return;
         }
-        qry=request.getParameter("qry");
-        if( qry == null ) {
+        qry = request.getParameter("qry");
+        if (qry == null) {
             qry = "*:*";
         }
 
-        listBeans( writer, qry );
+        listBeans(writer, qry);
     }
+
 
     public void getAttribute(PrintWriter writer, String onameStr, String att, String key) {
         try {
             ObjectName oname = new ObjectName(onameStr);
             Object value = mBeanServer.getAttribute(oname, att);
 
-            if(null != key && value instanceof CompositeData)
-              value = ((CompositeData)value).get(key);
+            if (null != key && value instanceof CompositeData)
+                value = ((CompositeData) value).get(key);
 
             String valueStr;
             if (value != null) {
@@ -145,7 +150,7 @@ public class JMXProxyServlet extends HttpServlet  {
             writer.print("' - ");
             writer.print(att);
 
-            if(null != key) {
+            if (null != key) {
                 writer.print(" - key '");
                 writer.print(key);
                 writer.print("'");
@@ -160,24 +165,23 @@ public class JMXProxyServlet extends HttpServlet  {
         }
     }
 
-    public void setAttribute( PrintWriter writer,
-                              String onameStr, String att, String val )
-    {
+
+    public void setAttribute(PrintWriter writer, String onameStr, String att, String val) {
         try {
             setAttributeInternal(onameStr, att, val);
             writer.println("OK - Attribute set");
-        } catch( Exception ex ) {
+        } catch (Exception ex) {
             writer.println("Error - " + ex.toString());
             ex.printStackTrace(writer);
         }
     }
 
-    public void listBeans( PrintWriter writer, String qry )
-    {
+
+    public void listBeans(PrintWriter writer, String qry) {
 
         Set<ObjectName> names = null;
         try {
-            names=mBeanServer.queryNames(new ObjectName(qry), null);
+            names = mBeanServer.queryNames(new ObjectName(qry), null);
             writer.println("OK - Number of results: " + names.size());
             writer.println();
         } catch (Exception ex) {
@@ -190,11 +194,12 @@ public class JMXProxyServlet extends HttpServlet  {
         writer.print(dump);
     }
 
+
     /**
      * Determines if a type is supported by the {@link JMXProxyServlet}.
-     * 
-     * @param type  The type to check
-     * @return      Always returns <code>true</code>
+     *
+     * @param type The type to check
+     * @return Always returns <code>true</code>
      */
     public boolean isSupported(String type) {
         return true;
@@ -211,7 +216,7 @@ public class JMXProxyServlet extends HttpServlet  {
             } else {
                 writer.println("OK - Operation " + op + " without return value");
             }
-        } catch( Exception ex ) {
+        } catch (Exception ex) {
             writer.println("Error - " + ex.toString());
             ex.printStackTrace(writer);
         }
@@ -220,9 +225,10 @@ public class JMXProxyServlet extends HttpServlet  {
 
     /**
      * Parses parameter values from a parameter string.
+     *
      * @param paramString The string containing comma-separated
-     *                    operation-invocation parameters, or
-     *                    <code>null</code> if there are no parameters.
+     *            operation-invocation parameters, or <code>null</code> if there
+     *            are no parameters.
      * @return An array of String parameters (empty array if
      *         <code>paramString</code> was <code>null</code>).
      */
@@ -233,45 +239,62 @@ public class JMXProxyServlet extends HttpServlet  {
             return paramString.split(",");
     }
 
+
     /**
      * Sets an MBean attribute's value.
      */
-    private void setAttributeInternal(String onameStr,
-                                      String attributeName,
-                                      String value)
-        throws OperationsException, MBeanException, ReflectionException {
-        ObjectName oname=new ObjectName( onameStr );
-        String type=registry.getType(oname, attributeName);
-        Object valueObj=registry.convertValue(type, value );
-        mBeanServer.setAttribute( oname, new Attribute(attributeName, valueObj));
+    private void setAttributeInternal(String onameStr, String attributeName, String value)
+            throws OperationsException, MBeanException, ReflectionException {
+        ObjectName oname = new ObjectName(onameStr);
+        String type = registry.getType(oname, attributeName);
+        Object valueObj = registry.convertValue(type, value);
+        mBeanServer.setAttribute(oname, new Attribute(attributeName, valueObj));
     }
+
 
     /**
      * Invokes an operation on an MBean.
+     *
      * @param onameStr The name of the MBean.
      * @param operation The name of the operation to invoke.
      * @param parameters An array of Strings containing the parameters to the
-     *                   operation. They will be converted to the appropriate
-     *                   types to call the requested operation.
+     *            operation. They will be converted to the appropriate types to
+     *            call the requested operation.
      * @return The value returned by the requested operation.
      */
-    private Object invokeOperationInternal(String onameStr,
-                                           String operation,
-                                           String[] parameters)
-        throws OperationsException, MBeanException, ReflectionException {
-        ObjectName oname=new ObjectName( onameStr );
-        MBeanOperationInfo methodInfo = registry.getMethodInfo(oname,operation);
+    @SuppressWarnings("null") // parameters can't be null if signature.length > 0
+    private Object invokeOperationInternal(String onameStr, String operation, String[] parameters)
+            throws OperationsException, MBeanException, ReflectionException {
+        ObjectName oname = new ObjectName(onameStr);
+        int paramCount = null == parameters ? 0 : parameters.length;
+        MBeanOperationInfo methodInfo = registry.getMethodInfo(oname, operation, paramCount);
+        if(null == methodInfo) {
+            // getMethodInfo returns null for both "object not found" and "operation not found"
+            MBeanInfo info = null;
+            try {
+                info = registry.getMBeanServer().getMBeanInfo(oname);
+            } catch (InstanceNotFoundException infe) {
+                throw infe;
+            } catch (Exception e) {
+                throw new IllegalArgumentException(sm.getString("jmxProxyServlet.noBeanFound", onameStr), e);
+            }
+            throw new IllegalArgumentException(
+                    sm.getString("jmxProxyServlet.noOperationOnBean",
+                            operation, Integer.valueOf(paramCount), onameStr, info.getClassName()));
+        }
+
         MBeanParameterInfo[] signature = methodInfo.getSignature();
         String[] signatureTypes = new String[signature.length];
         Object[] values = new Object[signature.length];
         for (int i = 0; i < signature.length; i++) {
-           MBeanParameterInfo pi = signature[i];
-           signatureTypes[i] = pi.getType();
-           values[i] = registry.convertValue(pi.getType(), parameters[i] );
-         }
+            MBeanParameterInfo pi = signature[i];
+            signatureTypes[i] = pi.getType();
+            values[i] = registry.convertValue(pi.getType(), parameters[i]);
+        }
 
-        return mBeanServer.invoke(oname,operation,values,signatureTypes);
+        return mBeanServer.invoke(oname, operation, values, signatureTypes);
     }
+
 
     private void output(String indent, PrintWriter writer, Object result) {
         if (result instanceof Object[]) {

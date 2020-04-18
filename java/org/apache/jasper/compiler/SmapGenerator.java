@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ import java.util.List;
  * Represents a source map (SMAP), which serves to associate lines
  * of the input JSP file(s) to lines in the generated servlet in the
  * final .class file, according to the JSR-045 spec.
- * 
+ *
  * @author Shawn Bayern
  */
 public class SmapGenerator {
@@ -57,6 +57,7 @@ public class SmapGenerator {
     /**
      * Sets the filename (without path information) for the generated
      * source file.  E.g., "foo$jsp.java".
+     * @param x The file name
      */
     public synchronized void setOutputFileName(String x) {
         outputFileName = x;
@@ -65,13 +66,13 @@ public class SmapGenerator {
     /**
      * Adds the given SmapStratum object, representing a Stratum with
      * logically associated FileSection and LineSection blocks, to
-     * the current SmapGenerator.  If <tt>default</tt> is true, this
+     * the current SmapGenerator.  If <code>defaultStartum</code> is true, this
      * stratum is made the default stratum, overriding any previously
      * set default.
      *
      * @param stratum the SmapStratum object to add
-     * @param defaultStratum if <tt>true</tt>, this SmapStratum is considered
-     *                to represent the default SMAP stratum unless
+     * @param defaultStratum if <code>true</code>, this SmapStratum is
+     *                considered to represent the default SMAP stratum unless
      *                overwritten
      */
     public synchronized void addStratum(SmapStratum stratum,
@@ -86,7 +87,7 @@ public class SmapGenerator {
      *
      * @param smap the SMAP to embed
      * @param stratumName the name of the stratum output by the compilation
-     *                    that produced the <tt>smap</tt> to be embedded
+     *                    that produced the <code>smap</code> to be embedded
      */
     public synchronized void addSmap(String smap, String stratumName) {
         embedded.add("*O " + stratumName + "\n"
@@ -98,7 +99,7 @@ public class SmapGenerator {
      * Instructs the SmapGenerator whether to actually print any embedded
      * SMAPs or not.  Intended for situations without an SMAP resolver.
      *
-     * @param status If <tt>false</tt>, ignore any embedded SMAPs.
+     * @param status If <code>false</code>, ignore any embedded SMAPs.
      */
     public void setDoEmbedded(boolean status) {
         doEmbedded = status;

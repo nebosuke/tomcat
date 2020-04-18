@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,7 +47,6 @@ import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.Oid;
 
-
 /**
  * A SPNEGO authenticator that uses the SPNEGO/Kerberos support built in to Java
  * 6. Successful Kerberos authentication depends on the correct configuration of
@@ -58,7 +57,8 @@ import org.ietf.jgss.Oid;
 public class SpnegoAuthenticator extends AuthenticatorBase {
 
     private final Log log = LogFactory.getLog(SpnegoAuthenticator.class); // must not be static
-    
+    private static final String AUTH_HEADER_VALUE_NEGOTIATE = "Negotiate";
+
     private String loginConfigName = Constants.DEFAULT_LOGIN_MODULE_NAME;
     public String getLoginConfigName() {
         return loginConfigName;
@@ -149,19 +149,19 @@ public class SpnegoAuthenticator extends AuthenticatorBase {
             return true;
         }
 
-        MessageBytes authorization = 
+        MessageBytes authorization =
             request.getCoyoteRequest().getMimeHeaders()
             .getValue("authorization");
-        
+
         if (authorization == null) {
             if (log.isDebugEnabled()) {
                 log.debug(sm.getString("authenticator.noAuthHeader"));
             }
-            response.setHeader("WWW-Authenticate", "Negotiate");
+            response.setHeader(AUTH_HEADER_NAME, AUTH_HEADER_VALUE_NEGOTIATE);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
-        
+
         authorization.toBytes();
         ByteChunk authorizationBC = authorization.getByteChunk();
 
@@ -170,13 +170,13 @@ public class SpnegoAuthenticator extends AuthenticatorBase {
                 log.debug(sm.getString(
                         "spnegoAuthenticator.authHeaderNotNego"));
             }
-            response.setHeader("WWW-Authenticate", "Negotiate");
+            response.setHeader(AUTH_HEADER_NAME, AUTH_HEADER_VALUE_NEGOTIATE);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
 
         authorizationBC.setOffset(authorizationBC.getOffset() + 10);
-                
+
         byte[] decoded = Base64.decodeBase64(authorizationBC.getBuffer(),
                 authorizationBC.getOffset(),
                 authorizationBC.getLength());
@@ -190,7 +190,7 @@ public class SpnegoAuthenticator extends AuthenticatorBase {
                 log.debug(sm.getString(
                         "spnegoAuthenticator.authHeaderNoToken"));
             }
-            response.setHeader("WWW-Authenticate", "Negotiate");
+            response.setHeader(AUTH_HEADER_NAME, AUTH_HEADER_VALUE_NEGOTIATE);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
@@ -243,7 +243,7 @@ public class SpnegoAuthenticator extends AuthenticatorBase {
                             "spnegoAuthenticator.ticketValidateFail"));
                 }
                 // Start again
-                response.setHeader("WWW-Authenticate", "Negotiate");
+                response.setHeader(AUTH_HEADER_NAME, AUTH_HEADER_VALUE_NEGOTIATE);
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                 return false;
             }
@@ -255,7 +255,7 @@ public class SpnegoAuthenticator extends AuthenticatorBase {
             if (log.isDebugEnabled()) {
                 log.debug(sm.getString("spnegoAuthenticator.ticketValidateFail"), e);
             }
-            response.setHeader("WWW-Authenticate", "Negotiate");
+            response.setHeader(AUTH_HEADER_NAME, AUTH_HEADER_VALUE_NEGOTIATE);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         } catch (PrivilegedActionException e) {
@@ -267,7 +267,7 @@ public class SpnegoAuthenticator extends AuthenticatorBase {
             } else {
                 log.error(sm.getString("spnegoAuthenticator.serviceLoginFail"), e);
             }
-            response.setHeader("WWW-Authenticate", "Negotiate");
+            response.setHeader(AUTH_HEADER_NAME, AUTH_HEADER_VALUE_NEGOTIATE);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         } finally {
@@ -288,7 +288,7 @@ public class SpnegoAuthenticator extends AuthenticatorBase {
         }
 
         // Send response token on success and failure
-        response.setHeader("WWW-Authenticate", "Negotiate "
+        response.setHeader(AUTH_HEADER_NAME, AUTH_HEADER_VALUE_NEGOTIATE + " "
                 + Base64.encodeBase64String(outToken));
 
         if (principal != null) {

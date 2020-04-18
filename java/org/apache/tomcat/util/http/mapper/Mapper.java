@@ -259,7 +259,7 @@ public final class Mapper {
                 welcomeResources, resources, null);
     }
 
-    
+
     /**
      * Add a new Context to an existing Host.
      *
@@ -281,8 +281,8 @@ public final class Mapper {
         addContextVersion(hostName, host, path, version, context, welcomeResources, resources,
                 wrappers, false, false);
     }
-    
-    
+
+
     /**
      * Add a new Context to an existing Host.
      *
@@ -324,7 +324,7 @@ public final class Mapper {
             newContextVersion.resources = resources;
             newContextVersion.mapperContextRootRedirectEnabled = mapperContextRootRedirectEnabled;
             newContextVersion.mapperDirectoryRedirectEnabled = mapperDirectoryRedirectEnabled;
-            
+
             if (wrappers != null) {
                 addWrappers(newContextVersion, wrappers);
             }
@@ -770,6 +770,7 @@ public final class Mapper {
     /**
      * Map the specified URI.
      */
+    @SuppressWarnings("deprecation") // contextPath
     private final void internalMap(CharChunk host, CharChunk uri,
             String version, MappingData mappingData) throws Exception {
 
@@ -1087,6 +1088,7 @@ public final class Mapper {
     /**
      * Exact mapping.
      */
+    @SuppressWarnings("deprecation") // contextPath
     private final void internalMapExactWrapper
         (Wrapper[] wrappers, CharChunk path, MappingData mappingData) {
         Wrapper wrapper = exactFind(wrappers, path);

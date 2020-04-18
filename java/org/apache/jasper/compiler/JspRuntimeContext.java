@@ -19,6 +19,7 @@ package org.apache.jasper.compiler;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FilePermission;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.CodeSource;
@@ -50,7 +51,7 @@ import org.apache.juli.logging.LogFactory;
 
 /**
  * Class for tracking JSP compile time file dependencies when the
- * &060;%@include file="..."%&062; directive is used.
+ * &gt;%@include file="..."%&lt; directive is used.
  *
  * A background thread periodically checks the files a JSP page
  * is dependent upon.  If a dependent file changes the JSP page
@@ -62,18 +63,20 @@ import org.apache.juli.logging.LogFactory;
  */
 public final class JspRuntimeContext {
 
-    // Logger
+    /**
+     * Logger
+     */
     private final Log log = LogFactory.getLog(JspRuntimeContext.class); // must not be static
 
-    /*
+    /**
      * Counts how many times the webapp's JSPs have been reloaded.
      */
-    private AtomicInteger jspReloadCount = new AtomicInteger(0);
+    private final AtomicInteger jspReloadCount = new AtomicInteger(0);
 
-    /*
+    /**
      * Counts how many times JSPs have been unloaded in this webapp.
      */
-    private AtomicInteger jspUnloadCount = new AtomicInteger(0);
+    private final AtomicInteger jspUnloadCount = new AtomicInteger(0);
 
     /**
      * Preload classes required at runtime by a JSP servlet so that
@@ -111,6 +114,7 @@ public final class JspRuntimeContext {
      * Loads in any previously generated dependencies from file.
      *
      * @param context ServletContext for web application
+     * @param options The main Jasper options
      */
     public JspRuntimeContext(ServletContext context, Options options) {
 
@@ -451,14 +455,14 @@ public final class JspRuntimeContext {
     }
 
     /**
-     * The classpath that is passed off to the Java compiler.
+     * @return the classpath that is passed off to the Java compiler.
      */
     public String getClassPath() {
         return classpath;
     }
 
     /**
-     * Last time the update background task has run
+     * @return Last time the update background task has run
      */
     public long getLastJspQueueUpdate() {
         return lastJspQueueUpdate;
@@ -469,6 +473,7 @@ public final class JspRuntimeContext {
 
     /**
      * Method used to initialize classpath for compiles.
+     * @return the compilation classpath
      */
     private String initClassPath() {
 
@@ -504,7 +509,9 @@ public final class JspRuntimeContext {
         return path;
     }
 
-    // Helper class to allow initSecurity() to return two items
+    /**
+     * Helper class to allow initSecurity() to return two items
+     */
     private static class SecurityHolder{
         private final CodeSource cs;
         private final PermissionCollection pc;
@@ -600,8 +607,10 @@ public final class JspRuntimeContext {
                         permissions.add(
                                 new FilePermission(jndiUrl,"read") );
                 }
-            } catch(Exception e) {
-                context.log("Security Init for context failed",e);
+            } catch (IOException e) {
+                context.log(Localizer.getMessage("jsp.error.security"), e);
+            } catch (RuntimeException e) {
+                context.log(Localizer.getMessage("jsp.error.security"), e);
             }
         }
         return new SecurityHolder(source, permissions);
