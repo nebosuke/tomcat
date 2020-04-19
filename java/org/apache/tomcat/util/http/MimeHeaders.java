@@ -148,7 +148,8 @@ public class MimeHeaders {
         int len = headers.length;
         for (int i = 0; i < len; i++) {
             if (headers[i] != null) {
-                headers[i].recycle();
+                // headers[i].recycle();
+                headers[i] = null;
             }
         }
         count = 0;
