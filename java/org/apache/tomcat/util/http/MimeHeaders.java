@@ -91,7 +91,7 @@ public class MimeHeaders {
     /** Initial size - should be == average number of headers per request
      *  XXX  make it configurable ( fine-tuning of web-apps )
      */
-    public static final int DEFAULT_HEADER_SIZE=8;
+    public static final int DEFAULT_HEADER_SIZE=20;
 
     private static final StringManager sm =
             StringManager.getManager("org.apache.tomcat.util.http");
@@ -145,8 +145,11 @@ public class MimeHeaders {
      * Clears all header fields.
      */
     public synchronized void clear() {
-        for (int i = 0; i < count; i++) {
-            headers[i].recycle();
+        int len = headers.length;
+        for (int i = 0; i < len; i++) {
+            if (headers[i] != null) {
+                headers[i].recycle();
+            }
         }
         count = 0;
     }
